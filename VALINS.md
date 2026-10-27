@@ -2,23 +2,25 @@
 
 ## Cara menggunakan
 
-1. Kirim `/menu` atau `/start` untuk melihat pilihan fitur.
-2. Upload dokumen `.xlsx` dengan struktur **Sheet1** yang sama seperti `REPORT VALINS ODP & ODC`.
-3. Bot otomatis mengirim **dua laporan PARE-PARE** sesuai contoh. Tidak perlu upload hari sebelumnya: realisasi H-1 dan growth dibaca dari Excel.
-4. Gunakan command untuk mengambil laporan yang tersimpan:
+1. Kirim `/start` atau `/menu`, lalu tekan **VALINS ODP**, **VALINS DC**, atau **VALINS ODP DAN DC**.
+2. Pilih **PARE-PARE**, **BONE**, **KENDARI**, **MAKASSAR**, atau **CETAK SEMUA**. Jika sudah ada data, laporan langsung dicetak.
+3. Upload dokumen `.xlsx` dengan struktur **Sheet1** yang sama seperti `REPORT VALINS ODP & ODC` untuk memperbarui data dan mencetak sesuai pilihan. Tidak perlu upload hari sebelumnya: realisasi H-1 dan growth dibaca dari Excel.
+4. Tombol **Cetak Data Tersimpan** dapat digunakan untuk mencetak ulang; **Ganti Branch** dan **Menu Utama** mengubah pilihan.
+
+Command teks juga tetap tersedia:
 
 | Command | Hasil |
 |---|---|
-| `/valins` | Dua laporan PARE-PARE |
-| `/valins_visit` | Hanya VISIT ODP PARE-PARE |
-| `/valins_dc` | Hanya DC PARE-PARE |
+| `/valins` | Buka tombol branch untuk VALINS ODP DAN DC |
+| `/valins_visit` | Buka tombol branch untuk VALINS ODP |
+| `/valins_dc` | Buka tombol branch untuk VALINS DC |
 | `/valins bone` | Dua laporan BONE |
 | `/valins makassar` | Dua laporan MAKASSAR |
 | `/valins kendari` | Dua laporan KENDARI |
 | `/valins semua` | Delapan pesan: dua laporan untuk setiap branch |
 | `/valins_dc bone 2026-10-27` | DC BONE pada tanggal arsip yang dipilih |
 
-Command mengambil data dari **upload Excel terakhir pada tanggal arsip terbaru di chat yang sama**. Jika belum ada Excel, bot memberikan petunjuk upload. `/unspec` memberi petunjuk CSV dan `/report` tetap mengambil laporan UNSPEC. Jenis dokumen dipilih otomatis: CSV untuk UNSPEC, XLSX untuk VALINS.
+Command yang menyertakan branch mengambil data dari **upload Excel terakhir pada tanggal arsip terbaru di chat yang sama**. Jika belum ada Excel, bot memberikan petunjuk upload. `/unspec` membuka tombol branch UNSPEC dan `/report` tetap mengambil laporan UNSPEC. Tanpa pilihan menu, upload XLSX masih menghasilkan dua laporan PARE-PARE seperti versi sebelumnya.
 
 Caption tanggal `2026-10-27` atau `tanggal=2026-10-27` juga berlaku untuk **tanggal arsip VALINS**. Caption tidak mengubah nilai H/H-1 dalam workbook. Semua anggota grup yang sama menggunakan arsip grup tersebut. Teks laporan mengikuti struktur contoh tanpa menambahkan baris tanggal.
 

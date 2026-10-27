@@ -6,6 +6,19 @@ Upload Excel `.xlsx` → bot membaca **Sheet1** dan mengirim **VALINS VISIT ODP*
 
 Panduan singkat untuk deployment proyek yang sudah dikonfigurasi tersedia di **[DEPLOY.md](DEPLOY.md)**.
 
+## Menu tombol
+
+1. Kirim **`/start`** atau **`/menu`**.
+2. Tekan **UNSPEC**, **VALINS ODP**, **VALINS DC**, atau **VALINS ODP DAN DC**.
+3. Tekan **PARE-PARE**, **BONE**, **KENDARI**, **MAKASSAR**, atau **CETAK SEMUA**.
+4. Jika ada data tersimpan di chat itu, laporan langsung dicetak. Untuk memperbarui data, upload **CSV untuk UNSPEC** atau **Excel XLSX untuk VALINS**; hasil mengikuti jenis/branch yang dipilih.
+
+Pilihan tersimpan sampai diganti. Tombol **Cetak Data Tersimpan**, **Ganti Branch**, dan **Menu Utama** tersedia setelah memilih branch. `/start` membuka ulang menu utama dan mereset pilihan Anda di chat/topic tersebut. Pilihan setiap pengguna dipisahkan, sedangkan riwayat data tetap milik chat/grup yang sama.
+
+**CETAK SEMUA** menghasilkan 4 laporan untuk UNSPEC, 4 laporan untuk salah satu jenis VALINS, atau 8 laporan untuk VALINS ODP DAN DC. File historis tetap dapat diberi caption tanggal. File yang tidak sesuai jenis pilihan ditolak dengan petunjuk yang benar.
+
+Setelah deploy versi menu tombol, jalankan **`npm run webhook:set`** agar Telegram mengirim update `callback_query` dari tombol. Database menu dibuat dengan `npm run db:setup` (sudah dijalankan pada database proyek saat fitur dibangun).
+
 ## Perilaku laporan UNSPEC
 
 - CSV baru maupun lama diterima. Tanggal tiket tidak dijadikan tanggal laporan.

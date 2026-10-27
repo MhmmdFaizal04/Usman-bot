@@ -86,6 +86,29 @@ try {
     await store.prepareUpload(base - 10, reversedChat, 2, stamp(27, 9), snapshot(2), '2026-10-25');
     assert.match((await store.report(reversedChat, '2026-10-26'))[3]!, /SALDO \(H-1\): 2\n/);
 
+    await store.prepareMenu(base - 20, chat, 'user-a', 0, { type: 'kind', kind: 'unspec' });
+    assert.deepEqual(await store.getPreference(chat, 'user-a'), { kind: 'unspec', scope: null });
+    await store.prepareMenu(base - 21, chat, 'user-a', 0, { type: 'branch', kind: 'unspec', scope: 'BONE' });
+    assert.deepEqual(await store.getPreference(chat, 'user-a'), { kind: 'unspec', scope: 'BONE' });
+    const menuJob = await store.getJob(base - 21);
+    assert.match(String(menuJob?.messages[0]), /BRANCH BONE/);
+    const confirmation = menuJob?.messages.at(-1);
+    assert.ok(confirmation && typeof confirmation !== 'string' && confirmation.reply_markup?.inline_keyboard.length);
+    await store.prepareMenu(base - 22, chat, 'user-b', 0, { type: 'kind', kind: 'valins_dc' });
+    await store.prepareMenu(base - 23, chat, 'user-a', 42, { type: 'kind', kind: 'valins_visit' });
+    assert.deepEqual(await store.getPreference(chat, 'user-a'), { kind: 'unspec', scope: 'BONE' });
+    assert.deepEqual(await store.getPreference(chat, 'user-b'), { kind: 'valins_dc', scope: null });
+    assert.deepEqual(await store.getPreference(chat, 'user-a', 42), { kind: 'valins_visit', scope: null });
+    await store.prepareMenu(base - 24, chat, 'user-a', 0, { type: 'main' });
+    await store.prepareMenu(base - 24, chat, 'user-a', 0, { type: 'kind', kind: 'unspec' });
+    assert.equal(await store.getPreference(chat, 'user-a'), null); // Retry cannot reapply a different action.
+    assert.equal((await store.getPreference(chat, 'user-b'))?.kind, 'valins_dc');
+    await store.prepareUpload(base - 25, chat, 5, stamp(27, 10), snapshot(3), '2026-10-27', 'BONE');
+    assert.equal((await store.getJob(base - 25))?.messages.length, 1);
+    assert.match(String((await store.getJob(base - 25))?.messages[0]), /BRANCH BONE/);
+    assert.equal((await store.report(chat, '2026-10-27')).length, 4); // All branches remain in the snapshot.
+    console.log('Uji menu lulus: pilihan jenis/branch, tombol tersimpan, isolasi pengguna/topic, dan retry.');
+
     if (workbook) {
       const valinsChat = `integration-check:${randomUUID()}`;
       const expected = renderValinsReports(workbook);
@@ -102,6 +125,12 @@ try {
       const last = await tx<{ source_order: string }[]>`SELECT source_order::text FROM valins_snapshots WHERE chat_id = ${valinsChat}`;
       assert.equal(last[0]?.source_order, '2');
       assert.match((await store.valinsReport(`${valinsChat}-other`))[0]!, /Belum ada data VALINS/);
+      await store.prepareValinsUpload(base - 26, valinsChat, 3, stamp(27, 10), workbook, '2026-10-26', 'visit', 'SEMUA');
+      const selected = (await store.getJob(base - 26))!.messages;
+      assert.equal(selected.length, 4);
+      assert.ok(selected.every(message => typeof message === 'string' && message.includes('VALINS VISIT ODP')));
+      await store.prepareMenu(base - 27, valinsChat, 'user-a', 0, { type: 'branch', kind: 'valins_dc', scope: 'BONE' });
+      assert.match(String((await store.getJob(base - 27))?.messages[0]), /VALINS DC QR CODE & SERVICE – BONE/);
       console.log('Uji VALINS lulus: file Excel, H-1 bawaan, pemilihan laporan/branch, isolasi UNSPEC/chat, dan retry.');
     }
     verified = true;

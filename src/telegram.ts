@@ -1,5 +1,6 @@
 import { InputError, MAX_CSV_BYTES } from './report.js';
 import { MAX_XLSX_BYTES } from './valins.js';
+import type { OutgoingMessage } from './messages.js';
 
 export interface TelegramMessage {
   message_id: number;
@@ -11,7 +12,13 @@ export interface TelegramMessage {
   caption?: string;
   document?: { file_id: string; file_name?: string; file_size?: number };
 }
-export interface TelegramUpdate { update_id: number; message?: TelegramMessage }
+export interface TelegramCallbackQuery {
+  id: string;
+  from: { id: number; is_bot?: boolean };
+  message?: TelegramMessage;
+  data?: string;
+}
+export interface TelegramUpdate { update_id: number; message?: TelegramMessage; callback_query?: TelegramCallbackQuery }
 
 interface ApiResponse<T> { ok: boolean; result: T; error_code?: number; parameters?: { retry_after?: number } }
 export class TelegramError extends Error {
@@ -41,11 +48,20 @@ export class Telegram {
     return payload.result;
   }
 
-  async send(chatId: string, text: string, threadId?: number): Promise<void> {
+  async send(chatId: string, message: OutgoingMessage, threadId?: number): Promise<void> {
     await this.call('sendMessage', {
-      chat_id: chatId, text,
+      chat_id: chatId, text: typeof message === 'string' ? message : message.text,
+      ...(typeof message === 'string' || !message.reply_markup ? {} : { reply_markup: message.reply_markup }),
       ...(threadId ? { message_thread_id: threadId } : {})
     });
+  }
+
+  async answerCallback(id: string): Promise<void> {
+    try { await this.call('answerCallbackQuery', { callback_query_id: id }); }
+    catch (error) {
+      // Expired/already acknowledged callbacks must not block a queued menu action.
+      if (!(error instanceof TelegramError) || error.code !== 400) throw error;
+    }
   }
 
   async downloadCsv(document: NonNullable<TelegramMessage['document']>): Promise<string> {

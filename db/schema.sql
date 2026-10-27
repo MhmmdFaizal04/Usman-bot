@@ -32,3 +32,14 @@ CREATE TABLE IF NOT EXISTS valins_snapshots (
   snapshot JSONB NOT NULL,
   PRIMARY KEY (chat_id, report_date)
 );
+
+-- Pilihan menu milik setiap pengguna; anggota grup tidak saling mengganti pilihan.
+CREATE TABLE IF NOT EXISTS report_preferences (
+  chat_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  thread_id BIGINT NOT NULL DEFAULT 0,
+  report_type TEXT NOT NULL CHECK (report_type IN ('unspec', 'valins_visit', 'valins_dc', 'valins_all')),
+  scope TEXT CHECK (scope IN ('PARE-PARE', 'BONE', 'KENDARI', 'MAKASSAR', 'SEMUA')),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (chat_id, user_id, thread_id)
+);

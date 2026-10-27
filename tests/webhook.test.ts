@@ -6,6 +6,7 @@ import { Store } from '../src/store.js';
 import { Telegram } from '../src/telegram.js';
 import type { SheetData } from 'read-excel-file/node';
 import { workbookBytes } from './helpers/xlsx.js';
+import type { ReportPreference } from '../src/menu.js';
 
 test('webhook verifies the secret and accepts all users without an account allowlist', async t => {
   const original = { ...process.env };
@@ -66,10 +67,13 @@ test('XLSX upload is parsed and stored as VALINS; VALINS command selects the req
     return count ? { update_id: String(id), chat_id: '123', messages: ['prepared'], delivered: 1 } : null;
   });
   const download = t.mock.method(Telegram.prototype, 'downloadXlsx', async () => workbookBytes(rows));
+  let preference: ReportPreference | null = null;
+  t.mock.method(Store.prototype, 'getPreference', async () => preference);
   const upload = t.mock.method(Store.prototype, 'prepareValinsUpload', async () => {});
   const command = t.mock.method(Store.prototype, 'valinsReport', async () => ['chosen report']);
   const messages = t.mock.method(Store.prototype, 'prepareMessages', async () => {});
-  const csv = t.mock.method(Store.prototype, 'prepareUpload', async () => { throw new Error('XLSX must not use the CSV store'); });
+  const csv = t.mock.method(Store.prototype, 'prepareUpload', async () => {});
+  t.mock.method(Telegram.prototype, 'downloadCsv', async () => 'INCIDENT,WORKZONE\nINC1,WON');
   const run = async (updateId: number, message: object): Promise<number> => {
     let status = 0;
     const res = {
@@ -92,6 +96,55 @@ test('XLSX upload is parsed and stored as VALINS; VALINS command selects the req
     assert.equal(await run(11, { text: '/valins_dc bone 2026-10-26' }), 200);
     assert.deepEqual(command.mock.calls[0]!.arguments, ['123', 'dc', 'BONE', '2026-10-26']);
     assert.deepEqual(messages.mock.calls[0]!.arguments, [11, '123', ['chosen report']]);
+    preference = { kind: 'valins_dc', scope: 'BONE' };
+    assert.equal(await run(12, { document: { file_id: 'file', file_name: 'report.xlsx' } }), 200);
+    assert.equal(upload.mock.calls[1]!.arguments[6], 'dc');
+    assert.equal(upload.mock.calls[1]!.arguments[7], 'BONE');
+    preference = { kind: 'unspec', scope: 'SEMUA' };
+    assert.equal(await run(13, { document: { file_id: 'file', file_name: 'report.xlsx' } }), 200);
+    assert.equal(download.mock.callCount(), 2);
+    assert.match(String(messages.mock.calls[1]!.arguments[2]![0]), /Pilihan Anda UNSPEC/);
+    preference = { kind: 'unspec', scope: null };
+    assert.equal(await run(14, { document: { file_id: 'file', file_name: 'report.csv' } }), 200);
+    assert.equal(csv.mock.callCount(), 0);
+    assert.match(String(messages.mock.calls[2]!.arguments[2]![0]), /Pilih branch/);
+    preference = { kind: 'unspec', scope: 'BONE' };
+    assert.equal(await run(15, { document: { file_id: 'file', file_name: 'report.csv' } }), 200);
+    assert.equal(csv.mock.calls[0]!.arguments[6], 'BONE');
+  } finally {
+    for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
+    Object.assign(process.env, original);
+  }
+});
+
+test('/start and inline buttons use the clicking user, chat and topic', async t => {
+  const original = { ...process.env };
+  Object.assign(process.env, {
+    TELEGRAM_BOT_TOKEN: 'test', TELEGRAM_WEBHOOK_SECRET: 'test_secret_12345678', DATABASE_URL: 'postgresql://not-connected'
+  });
+  const lookups = new Map<number, number>();
+  t.mock.method(Store.prototype, 'getJob', async (id: number) => {
+    const count = lookups.get(id) ?? 0;
+    lookups.set(id, count + 1);
+    return count ? { update_id: String(id), chat_id: '-100123', messages: ['prepared'], delivered: 1 } : null;
+  });
+  const menu = t.mock.method(Store.prototype, 'prepareMenu', async () => {});
+  const ack = t.mock.method(Telegram.prototype, 'answerCallback', async () => {});
+  const run = async (body: unknown): Promise<number> => {
+    let status = 0;
+    const response = { setHeader() {}, status(code: number) { status = code; return this; }, json() { return this; } } as unknown as ApiResponse;
+    await handler({ method: 'POST', headers: { 'x-telegram-bot-api-secret-token': 'test_secret_12345678' }, body } as unknown as ApiRequest, response);
+    return status;
+  };
+  const botMessage = { from: { id: 777, is_bot: true }, chat: { id: -100123 }, message_id: 20, date: 1793062800, message_thread_id: 42 };
+  try {
+    assert.equal(await run({ update_id: 20, message: { ...botMessage, from: { id: 123 }, text: '/start' } }), 200);
+    assert.deepEqual(menu.mock.calls[0]!.arguments, [20, '-100123', '123', 42, { type: 'main' }]);
+    assert.equal(await run({ update_id: 21, callback_query: { id: 'cb1', from: { id: 456 }, message: botMessage, data: 'menu:valins_all' } }), 200);
+    assert.deepEqual(menu.mock.calls[1]!.arguments, [21, '-100123', '456', 42, { type: 'kind', kind: 'valins_all' }]);
+    assert.equal(await run({ update_id: 22, callback_query: { id: 'cb2', from: { id: 456 }, message: botMessage, data: 'branch:valins_all:SEMUA' } }), 200);
+    assert.deepEqual(menu.mock.calls[2]!.arguments, [22, '-100123', '456', 42, { type: 'branch', kind: 'valins_all', scope: 'SEMUA' }]);
+    assert.equal(ack.mock.callCount(), 2);
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
     Object.assign(process.env, original);

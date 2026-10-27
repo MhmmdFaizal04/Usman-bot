@@ -99,4 +99,6 @@ npm run build
 
 Setelah source terbaru diupload dan di-deploy, jalankan `npm run webhook:set` untuk memperbarui menu command. Tabel `valins_snapshots` sudah dibuat pada database proyek; jika menggunakan database lain, jalankan `npm run db:setup` terlebih dahulu.
 
-Kirim `/menu`, lalu upload Excel `.xlsx`. Bot membaca **Sheet1** dan mengirim dua laporan PARE-PARE. `/valins_visit` mengambil laporan VISIT ODP, `/valins_dc` mengambil laporan DC, dan `/valins semua` mengambil kedua laporan untuk empat branch. H-1 VALINS berasal dari kolom Excel, sehingga tersedia sejak upload pertama jika workbook memuat nilainya. Panduan rumus dan contoh command tersedia di [VALINS.md](VALINS.md).
+Kirim `/start`, pilih tombol **UNSPEC / VALINS ODP / VALINS DC / VALINS ODP DAN DC**, lalu pilih **PARE-PARE / BONE / KENDARI / MAKASSAR / CETAK SEMUA**. Data tersimpan langsung dicetak jika tersedia; upload CSV/Excel berikutnya mengikuti pilihan jenis dan branch. H-1 VALINS berasal dari kolom Excel, sehingga tersedia sejak upload pertama jika workbook memuat nilainya. Panduan rumus dan contoh command tersedia di [VALINS.md](VALINS.md).
+
+Versi menu tombol memerlukan tabel `report_preferences` dan update webhook **`callback_query`**. Jalankan `npm run db:setup` untuk database lain dan `npm run webhook:set` setelah deploy. Tabel proyek saat ini sudah disiapkan.

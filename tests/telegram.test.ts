@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Telegram, TelegramError } from '../src/telegram.js';
 import { InputError, MAX_CSV_BYTES } from '../src/report.js';
+import { mainMenu } from '../src/menu.js';
 
 test('CSV download uses Telegram getFile then fetches document content', async t => {
   const urls: string[] = [];
@@ -50,4 +51,18 @@ test('network errors with token-bearing URLs are replaced with safe errors', asy
     assert.ok(!error.message.includes('secret-token'));
     return true;
   });
+});
+
+test('inline keyboard is sent with its message and topic; expired callbacks are acknowledged safely', async t => {
+  const payloads: Record<string, unknown>[] = [];
+  t.mock.method(globalThis, 'fetch', async (_url: string, options: RequestInit) => {
+    payloads.push(JSON.parse(String(options.body)) as Record<string, unknown>);
+    return payloads.length === 1 ? Response.json({ ok: true, result: {} }) : Response.json({ ok: false, error_code: 400 }, { status: 400 });
+  });
+  const telegram = new Telegram('test-token');
+  const message = mainMenu();
+  await telegram.send('-100123', message, 42);
+  assert.deepEqual(payloads[0], { chat_id: '-100123', text: message.text, reply_markup: message.reply_markup, message_thread_id: 42 });
+  await telegram.answerCallback('expired');
+  assert.deepEqual(payloads[1], { callback_query_id: 'expired' });
 });

@@ -8,13 +8,14 @@ if (databaseUrl) {
   const sql = postgres(databaseUrl, { max: 1, prepare: false, connect_timeout: 10 });
   try {
     await sql`SELECT 1 AS connected`;
-    const tables = await sql<{ snapshots: string | null; jobs: string | null; valins: string | null }[]>`
+    const tables = await sql<{ snapshots: string | null; jobs: string | null; valins: string | null; preferences: string | null }[]>`
       SELECT to_regclass('public.daily_snapshots')::text AS snapshots,
              to_regclass('public.telegram_jobs')::text AS jobs,
-             to_regclass('public.valins_snapshots')::text AS valins
+             to_regclass('public.valins_snapshots')::text AS valins,
+             to_regclass('public.report_preferences')::text AS preferences
     `;
     console.log('PostgreSQL: terhubung.');
-    console.log(`Tabel aplikasi: ${tables[0]?.snapshots && tables[0]?.jobs && tables[0]?.valins ? 'siap' : 'belum lengkap; jalankan npm run db:setup'}.`);
+    console.log(`Tabel aplikasi: ${tables[0]?.snapshots && tables[0]?.jobs && tables[0]?.valins && tables[0]?.preferences ? 'siap' : 'belum lengkap; jalankan npm run db:setup'}.`);
   } catch {
     failed = true;
     console.error('PostgreSQL: gagal terhubung. Periksa credential dan akses jaringan.');
