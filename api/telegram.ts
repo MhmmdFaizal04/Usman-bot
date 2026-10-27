@@ -12,8 +12,8 @@ const HELP = [
   '📖 PANDUAN SINGKAT', '',
   'MEMBUAT LAPORAN',
   '1. Ketik /start atau /menu.',
-  '2. Pilih jenis laporan, lalu branch atau Cetak Semua.',
-  '3. Kirim file sebagai dokumen. Laporan akan dibuat sesuai pilihan Anda.', '',
+  '2. Pilih jenis laporan, lalu upload file sebagai dokumen.',
+  '3. Setelah file diproses, pilih branch atau Cetak Semua.', '',
   '📎 FORMAT FILE',
   '• UNSPEC: CSV (.csv), gunakan export lengkap.',
   '• VALINS ODP / DC: Excel (.xlsx), data di Sheet1.',
@@ -26,7 +26,7 @@ const HELP = [
   '• UNSPEC: menggunakan data tanggal sebelumnya di chat yang sama.',
   '• VALINS: menggunakan nilai H-1 yang tersedia di Excel.', '',
   '🖨 CETAK ULANG',
-  'Gunakan tombol Cetak Data Tersimpan setelah memilih branch.',
+  'Gunakan tombol Cetak Ulang atau Ganti Branch setelah laporan dicetak.',
   'Untuk memilih tanggal: /report 2026-10-26 atau /valins bone 2026-10-26.'
 ].join('\n');
 
@@ -77,27 +77,21 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
           await store.prepareMenu(update.update_id, chatId, userId, threadId, parseMenuAction(callback.data ?? ''));
         } else if (message.document) {
           const preference = await store.getPreference(chatId, userId, threadId);
-          if (preference && !preference.scope) throw new InputError('Pilih branch atau CETAK SEMUA pada tombol menu terlebih dahulu.');
           const reportDate = resolveReportDate(message.caption, message.date);
           const filename = message.document.file_name?.toLowerCase() ?? '';
           if (filename.endsWith('.xlsx')) {
             if (preference?.kind === 'unspec') throw new InputError('Pilihan Anda UNSPEC. Kirim CSV (.csv), atau gunakan /start untuk memilih VALINS.');
             const bytes = await telegram.downloadXlsx(message.document);
             const snapshot = await parseValinsWorkbook(bytes);
-            if (preference?.scope) {
-              await store.prepareValinsUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate, valinsKind(preference.kind), preference.scope);
-            } else {
-              await store.prepareValinsUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate);
-            }
+            const kind = preference?.kind ?? 'valins_all';
+            await store.prepareValinsUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate,
+              valinsKind(kind), 'PARE-PARE', { kind, userId, threadId });
           } else if (filename.endsWith('.csv')) {
             if (preference && preference.kind !== 'unspec') throw new InputError('Pilihan Anda VALINS. Kirim Excel (.xlsx), atau gunakan /start untuk memilih UNSPEC.');
             const csv = await telegram.downloadCsv(message.document);
             const snapshot = parseSnapshot(csv);
-            if (preference?.scope) {
-              await store.prepareUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate, preference.scope);
-            } else {
-              await store.prepareUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate);
-            }
+            await store.prepareUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate,
+              'SEMUA', { kind: 'unspec', userId, threadId });
           } else {
             throw new InputError('Kirim .csv untuk UNSPEC atau .xlsx untuk VALINS.');
           }
@@ -121,7 +115,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
             } else if (command === '/report') {
               if (extra.length || (date && !validDate(date))) throw new InputError('Gunakan /report atau /report YYYY-MM-DD dengan tanggal yang valid.');
               const preference = await store.getPreference(chatId, userId, threadId);
-              messages = await store.report(chatId, date, preference?.kind === 'unspec' && preference.scope ? preference.scope : 'SEMUA');
+              messages = await store.report(chatId, date ?? preference?.date ?? undefined, preference?.kind === 'unspec' && preference.scope ? preference.scope : 'SEMUA');
             } else {
               messages = [HELP, mainMenu()];
             }

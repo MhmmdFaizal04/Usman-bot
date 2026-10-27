@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS report_preferences (
   thread_id BIGINT NOT NULL DEFAULT 0,
   report_type TEXT NOT NULL CHECK (report_type IN ('unspec', 'valins_visit', 'valins_dc', 'valins_all')),
   scope TEXT CHECK (scope IN ('PARE-PARE', 'BONE', 'KENDARI', 'MAKASSAR', 'SEMUA')),
+  upload_date DATE,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (chat_id, user_id, thread_id)
 );
+
+ALTER TABLE report_preferences ADD COLUMN IF NOT EXISTS upload_date DATE;

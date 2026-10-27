@@ -1,8 +1,8 @@
 # Bot Telegram Laporan UNSPEC & VALINS Sulbagsel
 
-Upload CSV di Telegram → bot mengirim empat laporan: **BONE, KENDARI, MAKASSAR, PARE-PARE**. Aplikasi siap untuk deployment manual ke Vercel.
+Upload CSV di Telegram → pilih branch atau **Cetak Semua** → bot membuat laporan UNSPEC dari data yang baru diupload. Branch tersedia: **BONE, KENDARI, MAKASSAR, PARE-PARE**. Aplikasi siap untuk deployment manual ke Vercel.
 
-Upload Excel `.xlsx` → bot membaca **Sheet1** dan mengirim **VALINS VISIT ODP** serta **VALINS DC QR CODE & SERVICE**, default branch **PARE-PARE**. Panduan penggunaan dan rumus lengkap tersedia di **[VALINS.md](VALINS.md)**.
+Upload Excel `.xlsx` → bot membaca **Sheet1** → pilih branch untuk mencetak **VALINS VISIT ODP**, **VALINS DC QR CODE & SERVICE**, atau keduanya. Panduan penggunaan dan rumus lengkap tersedia di **[VALINS.md](VALINS.md)**.
 
 Panduan singkat untuk deployment proyek yang sudah dikonfigurasi tersedia di **[DEPLOY.md](DEPLOY.md)**.
 
@@ -10,10 +10,12 @@ Panduan singkat untuk deployment proyek yang sudah dikonfigurasi tersedia di **[
 
 1. Kirim **`/start`** atau **`/menu`**.
 2. Tekan **UNSPEC**, **VALINS ODP**, **VALINS DC**, atau **VALINS ODP DAN DC**.
-3. Tekan **PARE-PARE**, **BONE**, **KENDARI**, **MAKASSAR**, atau **CETAK SEMUA**.
-4. Jika ada data tersimpan di chat itu, laporan langsung dicetak. Untuk memperbarui data, upload **CSV untuk UNSPEC** atau **Excel XLSX untuk VALINS**; hasil mengikuti jenis/branch yang dipilih.
+3. Bot meminta upload **CSV untuk UNSPEC** atau **Excel XLSX untuk VALINS**. Belum ada laporan atau tombol branch yang ditampilkan pada tahap ini.
+4. Setelah upload diproses, tekan **PARE-PARE**, **BONE**, **KENDARI**, **MAKASSAR**, atau **CETAK SEMUA** untuk mencetak data tersebut.
 
-Pilihan tersimpan sampai diganti. Tombol **Cetak Data Tersimpan**, **Ganti Branch**, dan **Menu Utama** tersedia setelah memilih branch. `/start` membuka ulang menu utama dan mereset pilihan Anda di chat/topic tersebut. Pilihan setiap pengguna dipisahkan, sedangkan riwayat data tetap milik chat/grup yang sama.
+Tombol **Cetak Ulang**, **Ganti Branch**, **Upload File Baru**, dan **Menu Utama** tersedia setelah laporan dicetak. Setiap tombol terikat pada tanggal upload yang diproses, bukan otomatis mengambil arsip dengan tanggal paling besar. Tombol dari tanggal upload sebelumnya ditolak setelah Anda mengupload data tanggal lain. Setiap upload baru kembali menampilkan pilihan cetak, bukan langsung mencetak ulang branch lama.
+
+`/start` membuka menu utama dan mereset pilihan Anda di chat/topic tersebut tanpa menghapus snapshot harian. Pilihan setiap pengguna dipisahkan, sedangkan riwayat data tetap milik chat/grup yang sama.
 
 **CETAK SEMUA** menghasilkan 4 laporan untuk UNSPEC, 4 laporan untuk salah satu jenis VALINS, atau 8 laporan untuk VALINS ODP DAN DC. File historis tetap dapat diberi caption tanggal. File yang tidak sesuai jenis pilihan ditolak dengan petunjuk yang benar.
 
@@ -28,11 +30,11 @@ Setelah deploy versi menu tombol, jalankan **`npm run webhook:set`** agar Telegr
 - Caption tanggal tanpa awalan juga diterima, misalnya **`2026-10-25`**. Tanggal tidak valid seperti `2026-02-30` tetap ditolak.
 - Jika snapshot hari sebelumnya baru diupload/dikoreksi belakangan, laporan hari berikutnya yang tersimpan otomatis diperbarui. Gunakan `/report YYYY-MM-DD` untuk mengambil versi terbaru; pesan lama yang sudah dikirim tidak diedit.
 - Setiap upload adalah snapshot lengkap, bukan penambahan tiket ke snapshot sebelumnya.
-- Upload berulang pada hari yang sama menghasilkan laporan baru. Pesan upload terakhir menjadi snapshot acuan hari itu, walaupun proses upload sebelumnya baru selesai belakangan.
+- Upload berulang pada hari yang sama memperbarui data dan menampilkan pilihan cetak lagi. Pesan upload terakhir menjadi snapshot acuan hari itu, walaupun proses upload sebelumnya baru selesai belakangan.
 - H-1 menggunakan snapshot terakhir pada **tepat satu hari sebelumnya di chat yang sama**. Jika tidak tersedia, saldo H-1 dan growth bertuliskan `Belum tersedia`.
 - Snapshot lama dari HTML/JSON tidak diimpor. Hanya master STO dan LIS yang diambil dari dashboard.
 - Jika Anda mengirim ulang file identik melalui pesan baru, bot tetap membuat laporan. Pengulangan webhook untuk pesan yang sama dilanjutkan dari status pengiriman terakhir.
-- Empat laporan dikirim sebagai pesan terpisah. Jika ada tiket di luar cakupan, duplikat, atau tiket yang disaring, ada satu pesan catatan tambahan.
+- Tombol Cetak Semua mengirim empat laporan sebagai pesan terpisah. Catatan tiket di luar cakupan, duplikat, atau tiket tersaring ditampilkan pada konfirmasi upload.
 
 ## 1. Persiapan lokal
 
@@ -153,8 +155,8 @@ Script mendaftarkan `/api/telegram`, secret verifikasi, serta menu command bot. 
 ## 6. Penggunaan
 
 1. Buka bot dan kirim `/start`.
-2. Kirim CSV sebagai **dokumen/file**, bukan screenshot.
-3. Tunggu empat laporan. Data di luar cakupan akan dijelaskan melalui catatan tambahan.
+2. Pilih jenis laporan, lalu kirim CSV/Excel sebagai **dokumen/file**, bukan screenshot.
+3. Setelah file selesai diproses, pilih branch atau Cetak Semua. Laporan baru dikirim setelah pilihan ini ditekan.
 4. Upload CSV lagi jika ada perubahan hari yang sama. Untuk data tanggal lain, isi caption `tanggal=YYYY-MM-DD` ketika mengirim file; caption lain yang tidak sesuai format akan ditolak agar tanggal tidak keliru.
 
 Command:

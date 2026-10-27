@@ -93,24 +93,26 @@ test('XLSX upload is parsed and stored as VALINS; VALINS command selects the req
     assert.equal(upload.mock.callCount(), 1);
     assert.equal(csv.mock.callCount(), 0);
     assert.equal(upload.mock.calls[0]!.arguments[5], '2026-10-26');
+    assert.deepEqual(upload.mock.calls[0]!.arguments[8], { kind: 'valins_all', userId: '123', threadId: 0 });
     assert.equal(await run(11, { text: '/valins_dc bone 2026-10-26' }), 200);
     assert.deepEqual(command.mock.calls[0]!.arguments, ['123', 'dc', 'BONE', '2026-10-26']);
     assert.deepEqual(messages.mock.calls[0]!.arguments, [11, '123', ['chosen report']]);
     preference = { kind: 'valins_dc', scope: 'BONE' };
     assert.equal(await run(12, { document: { file_id: 'file', file_name: 'report.xlsx' } }), 200);
     assert.equal(upload.mock.calls[1]!.arguments[6], 'dc');
-    assert.equal(upload.mock.calls[1]!.arguments[7], 'BONE');
+    assert.deepEqual(upload.mock.calls[1]!.arguments[8], { kind: 'valins_dc', userId: '123', threadId: 0 });
     preference = { kind: 'unspec', scope: 'SEMUA' };
     assert.equal(await run(13, { document: { file_id: 'file', file_name: 'report.xlsx' } }), 200);
     assert.equal(download.mock.callCount(), 2);
     assert.match(String(messages.mock.calls[1]!.arguments[2]![0]), /Pilihan Anda UNSPEC/);
     preference = { kind: 'unspec', scope: null };
     assert.equal(await run(14, { document: { file_id: 'file', file_name: 'report.csv' } }), 200);
-    assert.equal(csv.mock.callCount(), 0);
-    assert.match(String(messages.mock.calls[2]!.arguments[2]![0]), /Pilih branch/);
+    assert.equal(csv.mock.callCount(), 1);
+    assert.deepEqual(csv.mock.calls[0]!.arguments[7], { kind: 'unspec', userId: '123', threadId: 0 });
     preference = { kind: 'unspec', scope: 'BONE' };
     assert.equal(await run(15, { document: { file_id: 'file', file_name: 'report.csv' } }), 200);
-    assert.equal(csv.mock.calls[0]!.arguments[6], 'BONE');
+    assert.equal(csv.mock.calls[1]!.arguments[6], 'SEMUA');
+    assert.deepEqual(csv.mock.calls[1]!.arguments[7], { kind: 'unspec', userId: '123', threadId: 0 });
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
     Object.assign(process.env, original);
@@ -142,8 +144,8 @@ test('/start and inline buttons use the clicking user, chat and topic', async t 
     assert.deepEqual(menu.mock.calls[0]!.arguments, [20, '-100123', '123', 42, { type: 'main' }]);
     assert.equal(await run({ update_id: 21, callback_query: { id: 'cb1', from: { id: 456 }, message: botMessage, data: 'menu:valins_all' } }), 200);
     assert.deepEqual(menu.mock.calls[1]!.arguments, [21, '-100123', '456', 42, { type: 'kind', kind: 'valins_all' }]);
-    assert.equal(await run({ update_id: 22, callback_query: { id: 'cb2', from: { id: 456 }, message: botMessage, data: 'branch:valins_all:SEMUA' } }), 200);
-    assert.deepEqual(menu.mock.calls[2]!.arguments, [22, '-100123', '456', 42, { type: 'branch', kind: 'valins_all', scope: 'SEMUA' }]);
+    assert.equal(await run({ update_id: 22, callback_query: { id: 'cb2', from: { id: 456 }, message: botMessage, data: 'branch:valins_all:SEMUA:2026-10-27' } }), 200);
+    assert.deepEqual(menu.mock.calls[2]!.arguments, [22, '-100123', '456', 42, { type: 'branch', kind: 'valins_all', scope: 'SEMUA', date: '2026-10-27' }]);
     assert.equal(ack.mock.callCount(), 2);
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];

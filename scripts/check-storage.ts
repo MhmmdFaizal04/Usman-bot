@@ -2,7 +2,7 @@ import 'dotenv/config';
 import assert from 'node:assert/strict';
 import { randomUUID, randomInt } from 'node:crypto';
 import postgres from 'postgres';
-import { parseSnapshot } from '../src/report.js';
+import { InputError, parseSnapshot } from '../src/report.js';
 import { Store } from '../src/store.js';
 import { readFile } from 'node:fs/promises';
 import { parseValinsWorkbook, renderValinsReports } from '../src/valins.js';
@@ -14,6 +14,7 @@ const rollback = new Error('INTEGRATION_CHECK_ROLLBACK');
 let verified = false;
 try {
   const workbook = process.argv[2] ? await parseValinsWorkbook(await readFile(process.argv[2])) : null;
+  console.log('Memulai uji database dalam transaksi sementara...');
   await sql.begin(async tx => {
     await tx`SET LOCAL statement_timeout = '15s'`;
     // Store transactions become SAVEPOINTs inside this disposable outer transaction.
@@ -85,20 +86,29 @@ try {
     await store.prepareUpload(base - 9, reversedChat, 1, stamp(27, 8), snapshot(3), '2026-10-26');
     await store.prepareUpload(base - 10, reversedChat, 2, stamp(27, 9), snapshot(2), '2026-10-25');
     assert.match((await store.report(reversedChat, '2026-10-26'))[3]!, /SALDO \(H-1\): 2\n/);
+    console.log('Snapshot, retry pengiriman, dan tanggal historis lulus. Menguji alur upload sebelum cetak...');
 
     await store.prepareMenu(base - 20, chat, 'user-a', 0, { type: 'kind', kind: 'unspec' });
-    assert.deepEqual(await store.getPreference(chat, 'user-a'), { kind: 'unspec', scope: null });
-    await store.prepareMenu(base - 21, chat, 'user-a', 0, { type: 'branch', kind: 'unspec', scope: 'BONE' });
-    assert.deepEqual(await store.getPreference(chat, 'user-a'), { kind: 'unspec', scope: 'BONE' });
+    assert.deepEqual(await store.getPreference(chat, 'user-a'), { kind: 'unspec', scope: null, date: null });
+    const prompt = (await store.getJob(base - 20))!.messages[0];
+    assert.ok(typeof prompt !== 'string' && prompt?.text.includes('Silakan upload file'));
+    await assert.rejects(store.prepareMenu(base - 28, chat, 'user-a', 0, { type: 'branch', kind: 'unspec', scope: 'BONE' }), InputError);
+    console.log('Pilihan cetak sebelum upload berhasil dicegah.');
+    await store.prepareUpload(base - 29, chat, 5, stamp(27, 9), snapshot(3), '2026-10-27', 'SEMUA', { kind: 'unspec', userId: 'user-a', threadId: 0 });
+    const uploaded = (await store.getJob(base - 29))!.messages;
+    assert.equal(uploaded.length, 1);
+    assert.ok(typeof uploaded[0] !== 'string' && uploaded[0]?.text.includes('berhasil diproses'));
+    await store.prepareMenu(base - 21, chat, 'user-a', 0, { type: 'branch', kind: 'unspec', scope: 'BONE', date: '2026-10-27' });
+    assert.deepEqual(await store.getPreference(chat, 'user-a'), { kind: 'unspec', scope: 'BONE', date: '2026-10-27' });
     const menuJob = await store.getJob(base - 21);
     assert.match(String(menuJob?.messages[0]), /BRANCH BONE/);
     const confirmation = menuJob?.messages.at(-1);
     assert.ok(confirmation && typeof confirmation !== 'string' && confirmation.reply_markup?.inline_keyboard.length);
     await store.prepareMenu(base - 22, chat, 'user-b', 0, { type: 'kind', kind: 'valins_dc' });
     await store.prepareMenu(base - 23, chat, 'user-a', 42, { type: 'kind', kind: 'valins_visit' });
-    assert.deepEqual(await store.getPreference(chat, 'user-a'), { kind: 'unspec', scope: 'BONE' });
-    assert.deepEqual(await store.getPreference(chat, 'user-b'), { kind: 'valins_dc', scope: null });
-    assert.deepEqual(await store.getPreference(chat, 'user-a', 42), { kind: 'valins_visit', scope: null });
+    assert.deepEqual(await store.getPreference(chat, 'user-a'), { kind: 'unspec', scope: 'BONE', date: '2026-10-27' });
+    assert.deepEqual(await store.getPreference(chat, 'user-b'), { kind: 'valins_dc', scope: null, date: null });
+    assert.deepEqual(await store.getPreference(chat, 'user-a', 42), { kind: 'valins_visit', scope: null, date: null });
     await store.prepareMenu(base - 24, chat, 'user-a', 0, { type: 'main' });
     await store.prepareMenu(base - 24, chat, 'user-a', 0, { type: 'kind', kind: 'unspec' });
     assert.equal(await store.getPreference(chat, 'user-a'), null); // Retry cannot reapply a different action.
@@ -107,7 +117,22 @@ try {
     assert.equal((await store.getJob(base - 25))?.messages.length, 1);
     assert.match(String((await store.getJob(base - 25))?.messages[0]), /BRANCH BONE/);
     assert.equal((await store.report(chat, '2026-10-27')).length, 4); // All branches remain in the snapshot.
-    console.log('Uji menu lulus: pilihan jenis/branch, tombol tersimpan, isolasi pengguna/topic, dan retry.');
+
+    const flowChat = `integration-check:${randomUUID()}`;
+    const context = { kind: 'unspec' as const, userId: 'upload-user', threadId: 0 };
+    await store.prepareUpload(base - 30, flowChat, 1, stamp(26, 17), snapshot(2));
+    await store.prepareMenu(base - 31, flowChat, context.userId, 0, { type: 'kind', kind: 'unspec' });
+    await store.prepareUpload(base - 32, flowChat, 2, stamp(27, 8), snapshot(3), '2026-10-27', 'SEMUA', context);
+    await store.prepareMenu(base - 33, flowChat, context.userId, 0, { type: 'branch', kind: 'unspec', scope: 'PARE-PARE', date: '2026-10-27' });
+    assert.match(String((await store.getJob(base - 33))!.messages[0]), /SALDO \(H\): 3\nSALDO \(H-1\): 2\n/);
+    await store.prepareUpload(base - 34, flowChat, 3, stamp(27, 10), snapshot(4), '2026-10-27', 'SEMUA', context);
+    await store.prepareMenu(base - 35, flowChat, context.userId, 0, { type: 'branch', kind: 'unspec', scope: 'PARE-PARE', date: '2026-10-27' });
+    assert.match(String((await store.getJob(base - 35))!.messages[0]), /SALDO \(H\): 4\nSALDO \(H-1\): 2\n/);
+    await store.prepareUpload(base - 36, flowChat, 4, stamp(28, 8), snapshot(5), '2026-10-28', 'SEMUA', context);
+    await assert.rejects(store.prepareMenu(base - 37, flowChat, context.userId, 0, { type: 'branch', kind: 'unspec', scope: 'PARE-PARE', date: '2026-10-27' }), InputError);
+    assert.match((await store.report(flowChat, '2026-10-28'))[3]!, /SALDO \(H\): 5\nSALDO \(H-1\): 4\n/);
+    assert.match((await store.report(flowChat, '2026-10-26'))[3]!, /SALDO \(H\): 2\n/);
+    console.log('Uji menu lulus: upload sebelum cetak, tombol terikat tanggal, H-1 hari sebelumnya, isolasi pengguna/topic, dan retry.');
 
     if (workbook) {
       const valinsChat = `integration-check:${randomUUID()}`;
@@ -129,7 +154,11 @@ try {
       const selected = (await store.getJob(base - 26))!.messages;
       assert.equal(selected.length, 4);
       assert.ok(selected.every(message => typeof message === 'string' && message.includes('VALINS VISIT ODP')));
-      await store.prepareMenu(base - 27, valinsChat, 'user-a', 0, { type: 'branch', kind: 'valins_dc', scope: 'BONE' });
+      await store.prepareValinsUpload(base - 38, valinsChat, 4, stamp(27, 11), workbook, '2026-10-26', 'dc', 'PARE-PARE', { kind: 'valins_dc', userId: 'user-a', threadId: 0 });
+      const valinsMenu = (await store.getJob(base - 38))!.messages;
+      assert.equal(valinsMenu.length, 1);
+      assert.ok(typeof valinsMenu[0] !== 'string' && valinsMenu[0]?.text.includes('berhasil diproses'));
+      await store.prepareMenu(base - 27, valinsChat, 'user-a', 0, { type: 'branch', kind: 'valins_dc', scope: 'BONE', date: '2026-10-26' });
       assert.match(String((await store.getJob(base - 27))?.messages[0]), /VALINS DC QR CODE & SERVICE – BONE/);
       console.log('Uji VALINS lulus: file Excel, H-1 bawaan, pemilihan laporan/branch, isolasi UNSPEC/chat, dan retry.');
     }
@@ -139,6 +168,8 @@ try {
 } catch (error) {
   if (error !== rollback) {
     console.error(error instanceof assert.AssertionError ? `Uji penyimpanan gagal: ${error.message}` : 'Uji penyimpanan gagal. Periksa koneksi dan skema database.');
+    if (error instanceof Error && 'code' in error) console.error(`Kode kesalahan: ${String(error.code)}`);
+    if (error instanceof InputError) console.error(error.message);
     process.exitCode = 1;
   }
 } finally { await sql.end({ timeout: 5 }); }

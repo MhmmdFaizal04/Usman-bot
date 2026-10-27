@@ -3,24 +3,24 @@
 ## Cara menggunakan
 
 1. Kirim `/start` atau `/menu`, lalu tekan **VALINS ODP**, **VALINS DC**, atau **VALINS ODP DAN DC**.
-2. Pilih **PARE-PARE**, **BONE**, **KENDARI**, **MAKASSAR**, atau **CETAK SEMUA**. Jika sudah ada data, laporan langsung dicetak.
-3. Upload dokumen `.xlsx` dengan struktur **Sheet1** yang sama seperti `REPORT VALINS ODP & ODC` untuk memperbarui data dan mencetak sesuai pilihan. Tidak perlu upload hari sebelumnya: realisasi H-1 dan growth dibaca dari Excel.
-4. Tombol **Cetak Data Tersimpan** dapat digunakan untuk mencetak ulang; **Ganti Branch** dan **Menu Utama** mengubah pilihan.
+2. Bot meminta upload dokumen `.xlsx` dengan struktur **Sheet1** yang sama seperti `REPORT VALINS ODP & ODC`.
+3. Setelah upload diproses, pilih **PARE-PARE**, **BONE**, **KENDARI**, **MAKASSAR**, atau **CETAK SEMUA**. Laporan baru dicetak setelah tombol ditekan. H-1 dan growth dibaca dari Excel.
+4. Tombol **Cetak Ulang** dan **Ganti Branch** tetap menggunakan tanggal data yang diupload. **Upload File Baru** meminta file baru; **Menu Utama** mengganti jenis laporan.
 
 Command teks juga tetap tersedia:
 
 | Command | Hasil |
 |---|---|
-| `/valins` | Buka tombol branch untuk VALINS ODP DAN DC |
-| `/valins_visit` | Buka tombol branch untuk VALINS ODP |
-| `/valins_dc` | Buka tombol branch untuk VALINS DC |
+| `/valins` | Minta upload Excel untuk VALINS ODP DAN DC |
+| `/valins_visit` | Minta upload Excel untuk VALINS ODP |
+| `/valins_dc` | Minta upload Excel untuk VALINS DC |
 | `/valins bone` | Dua laporan BONE |
 | `/valins makassar` | Dua laporan MAKASSAR |
 | `/valins kendari` | Dua laporan KENDARI |
 | `/valins semua` | Delapan pesan: dua laporan untuk setiap branch |
 | `/valins_dc bone 2026-10-27` | DC BONE pada tanggal arsip yang dipilih |
 
-Command yang menyertakan branch mengambil data dari **upload Excel terakhir pada tanggal arsip terbaru di chat yang sama**. Jika belum ada Excel, bot memberikan petunjuk upload. `/unspec` membuka tombol branch UNSPEC dan `/report` tetap mengambil laporan UNSPEC. Tanpa pilihan menu, upload XLSX masih menghasilkan dua laporan PARE-PARE seperti versi sebelumnya.
+Command teks lanjutan yang menyertakan branch mengambil arsip tersimpan di chat yang sama. Menu tombol selalu meminta upload terlebih dahulu. `/unspec` meminta upload CSV dan `/report` tetap mengambil laporan UNSPEC. Jika Excel dikirim tanpa memilih jenis melalui menu, bot menyiapkan VALINS ODP DAN DC dan menampilkan pilihan cetak setelah upload.
 
 Caption tanggal `2026-10-27` atau `tanggal=2026-10-27` juga berlaku untuk **tanggal arsip VALINS**. Caption tidak mengubah nilai H/H-1 dalam workbook. Semua anggota grup yang sama menggunakan arsip grup tersebut. Teks laporan mengikuti struktur contoh tanpa menambahkan baris tanggal.
 

@@ -68,8 +68,8 @@ Command ini menghubungkan bot ke `https://nama-project-anda.vercel.app/api/teleg
 
 1. Buka **https://t.me/reportsulbagsel_bot**.
 2. Kirim `/start`.
-3. Upload CSV sebagai dokumen.
-4. Bot mengirim empat laporan branch, ditambah catatan jika ada tiket di luar cakupan.
+3. Pilih UNSPEC, lalu upload CSV sebagai dokumen.
+4. Setelah file diproses, pilih branch atau Cetak Semua. Bot mencetak sesuai pilihan.
 5. Upload lagi pada hari yang sama jika data berubah.
 
 H-1 otomatis tersedia setelah ada snapshot hari sebelumnya di chat yang sama. Untuk mengupload dua file historis hari ini:
@@ -99,6 +99,6 @@ npm run build
 
 Setelah source terbaru diupload dan di-deploy, jalankan `npm run webhook:set` untuk memperbarui menu command. Tabel `valins_snapshots` sudah dibuat pada database proyek; jika menggunakan database lain, jalankan `npm run db:setup` terlebih dahulu.
 
-Kirim `/start`, pilih tombol **UNSPEC / VALINS ODP / VALINS DC / VALINS ODP DAN DC**, lalu pilih **PARE-PARE / BONE / KENDARI / MAKASSAR / CETAK SEMUA**. Data tersimpan langsung dicetak jika tersedia; upload CSV/Excel berikutnya mengikuti pilihan jenis dan branch. H-1 VALINS berasal dari kolom Excel, sehingga tersedia sejak upload pertama jika workbook memuat nilainya. Panduan rumus dan contoh command tersedia di [VALINS.md](VALINS.md).
+Kirim `/start`, pilih tombol **UNSPEC / VALINS ODP / VALINS DC / VALINS ODP DAN DC**, lalu **upload file terlebih dahulu**. Setelah file diproses, pilih **PARE-PARE / BONE / KENDARI / MAKASSAR / CETAK SEMUA**. Tombol cetak menggunakan tanggal data yang baru diupload. UNSPEC tanggal 27 mengambil H-1 dari snapshot tanggal 26 di chat yang sama; upload berulang tanggal 27 tidak mengubah pembandingnya menjadi upload sebelumnya pada tanggal 27. H-1 VALINS berasal dari kolom Excel. Panduan rumus dan contoh command tersedia di [VALINS.md](VALINS.md).
 
 Versi menu tombol memerlukan tabel `report_preferences` dan update webhook **`callback_query`**. Jalankan `npm run db:setup` untuk database lain dan `npm run webhook:set` setelah deploy. Tabel proyek saat ini sudah disiapkan.

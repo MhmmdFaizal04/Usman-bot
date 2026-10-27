@@ -3,7 +3,7 @@ import { InputError, previousDate, reconciliation, renderReports, validDate, wit
 import { renderValinsReports, type ValinsKind, type ValinsScope, type ValinsSnapshot } from './valins.js';
 import { BRANCHES } from './master.js';
 import type { OutgoingMessage } from './messages.js';
-import { branchMenu, mainMenu, selectedMenu, valinsKind, type MenuAction, type ReportPreference } from './menu.js';
+import { branchMenu, mainMenu, selectedMenu, uploadPrompt, valinsKind, type MenuAction, type ReportPreference, type UploadMenuContext } from './menu.js';
 
 let client: ReturnType<typeof postgres> | undefined;
 export function database(url: string): ReturnType<typeof postgres> {
@@ -32,7 +32,7 @@ export class Store {
     `;
   }
 
-  async prepareUpload(updateId: number, chatId: string, messageId: number, timestamp: number, snapshot: Snapshot, date = witaDate(timestamp), scope: ValinsScope = 'SEMUA'): Promise<void> {
+  async prepareUpload(updateId: number, chatId: string, messageId: number, timestamp: number, snapshot: Snapshot, date = witaDate(timestamp), scope: ValinsScope = 'SEMUA', menuContext?: UploadMenuContext): Promise<void> {
     if (!validDate(date)) throw new InputError('Tanggal laporan tidak valid.');
     await this.sql.begin(async tx => {
       // Serialise snapshot preparation for this chat, including simultaneous uploads.
@@ -67,10 +67,21 @@ export class Store {
       }
       const note = reconciliation(snapshot);
       const selected = selectUnspecReports(reports, scope);
-      const messages = note ? [...selected, note] : selected;
+      let messages: OutgoingMessage[] = note ? [...selected, note] : selected;
+      if (menuContext) {
+        await tx`
+          INSERT INTO report_preferences (chat_id, user_id, thread_id, report_type, scope, upload_date)
+          VALUES (${chatId}, ${menuContext.userId}, ${menuContext.threadId}, ${menuContext.kind}, NULL, ${date}::date)
+          ON CONFLICT (chat_id, user_id, thread_id) DO UPDATE SET
+            report_type = EXCLUDED.report_type, scope = NULL, upload_date = EXCLUDED.upload_date, updated_at = NOW()
+        `;
+        const menu = branchMenu('unspec', date, Boolean(old[0]));
+        if (note) menu.text += `\n\n${note}`;
+        messages = [menu];
+      }
       await tx`
         INSERT INTO telegram_jobs (update_id, chat_id, messages)
-        VALUES (${updateId}, ${chatId}, ${tx.json(messages)})
+        VALUES (${updateId}, ${chatId}, ${tx.json(messages as unknown as postgres.JSONValue)})
       `;
     });
   }
@@ -84,7 +95,7 @@ export class Store {
     return rows[0] ? selectUnspecReports(rows[0].reports, scope) : ['Belum ada laporan untuk tanggal tersebut. Upload CSV terlebih dahulu.'];
   }
 
-  async prepareValinsUpload(updateId: number, chatId: string, messageId: number, timestamp: number, snapshot: ValinsSnapshot, date = witaDate(timestamp), kind: ValinsKind = 'all', scope: ValinsScope = 'PARE-PARE'): Promise<void> {
+  async prepareValinsUpload(updateId: number, chatId: string, messageId: number, timestamp: number, snapshot: ValinsSnapshot, date = witaDate(timestamp), kind: ValinsKind = 'all', scope: ValinsScope = 'PARE-PARE', menuContext?: UploadMenuContext): Promise<void> {
     if (!validDate(date)) throw new InputError('Tanggal laporan tidak valid.');
     await this.sql.begin(async tx => {
       await tx`SELECT pg_advisory_xact_lock(hashtextextended(${chatId}, 0))`;
@@ -98,9 +109,18 @@ export class Store {
           uploaded_at = NOW(), snapshot = EXCLUDED.snapshot
         WHERE (valins_snapshots.source_time, valins_snapshots.source_order) < (EXCLUDED.source_time, EXCLUDED.source_order)
       `;
-      const messages = renderValinsReports(snapshot, kind, scope);
+      let messages: OutgoingMessage[] = renderValinsReports(snapshot, kind, scope);
+      if (menuContext) {
+        await tx`
+          INSERT INTO report_preferences (chat_id, user_id, thread_id, report_type, scope, upload_date)
+          VALUES (${chatId}, ${menuContext.userId}, ${menuContext.threadId}, ${menuContext.kind}, NULL, ${date}::date)
+          ON CONFLICT (chat_id, user_id, thread_id) DO UPDATE SET
+            report_type = EXCLUDED.report_type, scope = NULL, upload_date = EXCLUDED.upload_date, updated_at = NOW()
+        `;
+        messages = [branchMenu(menuContext.kind, date)];
+      }
       await tx`INSERT INTO telegram_jobs (update_id, chat_id, messages)
-        VALUES (${updateId}, ${chatId}, ${tx.json(messages)})`;
+        VALUES (${updateId}, ${chatId}, ${tx.json(messages as unknown as postgres.JSONValue)})`;
     });
   }
 
@@ -117,7 +137,7 @@ export class Store {
 
   async getPreference(chatId: string, userId: string, threadId = 0): Promise<ReportPreference | null> {
     const rows = await this.sql<ReportPreference[]>`
-      SELECT report_type AS kind, scope FROM report_preferences
+      SELECT report_type AS kind, scope, upload_date::text AS date FROM report_preferences
       WHERE chat_id = ${chatId} AND user_id = ${userId} AND thread_id = ${threadId}
     `;
     return rows[0] ?? null;
@@ -132,21 +152,42 @@ export class Store {
       if (action.type === 'main') {
         await tx`DELETE FROM report_preferences WHERE chat_id = ${chatId} AND user_id = ${userId} AND thread_id = ${threadId}`;
         messages = [mainMenu()];
-      } else {
-        const scope = action.type === 'kind' ? null : action.scope;
+      } else if (action.type === 'kind') {
         await tx`
-          INSERT INTO report_preferences (chat_id, user_id, thread_id, report_type, scope)
-          VALUES (${chatId}, ${userId}, ${threadId}, ${action.kind}, ${scope})
+          INSERT INTO report_preferences (chat_id, user_id, thread_id, report_type, scope, upload_date)
+          VALUES (${chatId}, ${userId}, ${threadId}, ${action.kind}, NULL, NULL)
           ON CONFLICT (chat_id, user_id, thread_id) DO UPDATE SET
-            report_type = EXCLUDED.report_type, scope = EXCLUDED.scope, updated_at = NOW()
+            report_type = EXCLUDED.report_type, scope = NULL, upload_date = NULL, updated_at = NOW()
         `;
-        if (action.type === 'kind') messages = [branchMenu(action.kind)];
-        else {
-          const reader = new Store(tx as unknown as ReturnType<typeof postgres>);
-          const reports = action.kind === 'unspec' ? await reader.report(chatId, undefined, action.scope) :
-            await reader.valinsReport(chatId, valinsKind(action.kind), action.scope);
+        messages = [uploadPrompt(action.kind)];
+      } else {
+        const preferences = await tx<ReportPreference[]>`
+          SELECT report_type AS kind, scope, upload_date::text AS date FROM report_preferences
+          WHERE chat_id = ${chatId} AND user_id = ${userId} AND thread_id = ${threadId}
+        `;
+        const preference = preferences[0];
+        const date = action.date ?? preference?.date;
+        if (!date || !preference?.date || preference.kind !== action.kind) {
+          throw new InputError('Silakan pilih jenis laporan dan upload file terlebih dahulu melalui /start.');
+        }
+        if (date !== preference.date) throw new InputError('Tombol ini berasal dari upload sebelumnya. Gunakan pilihan cetak dari file terbaru yang Anda upload.');
+        if (action.type === 'branches') {
+          const old = action.kind === 'unspec' ? await tx`SELECT 1 FROM daily_snapshots WHERE chat_id = ${chatId} AND report_date = ${previousDate(date)}::date` : [];
+          messages = [branchMenu(action.kind, date, Boolean(old.length))];
+        } else {
+          let reports: string[] = [];
+          if (action.kind === 'unspec') {
+            const rows = await tx<{ reports: string[] }[]>`SELECT reports FROM daily_snapshots WHERE chat_id = ${chatId} AND report_date = ${date}::date`;
+            if (rows[0]) reports = selectUnspecReports(rows[0].reports, action.scope);
+          } else {
+            const rows = await tx<{ snapshot: ValinsSnapshot }[]>`SELECT snapshot FROM valins_snapshots WHERE chat_id = ${chatId} AND report_date = ${date}::date`;
+            if (rows[0]) reports = renderValinsReports(rows[0].snapshot, valinsKind(action.kind), action.scope);
+          }
           const hasData = reports[0]?.startsWith('📊 SUMMARY') ?? false;
-          messages = [...(hasData ? reports : []), selectedMenu(action.kind, action.scope, hasData)];
+          if (!hasData) throw new InputError('Data upload tidak ditemukan. Silakan upload ulang file Anda.');
+          await tx`UPDATE report_preferences SET scope = ${action.scope}, updated_at = NOW()
+            WHERE chat_id = ${chatId} AND user_id = ${userId} AND thread_id = ${threadId}`;
+          messages = [...reports, selectedMenu(action.kind, action.scope, date)];
         }
       }
       await tx`INSERT INTO telegram_jobs (update_id, chat_id, messages)
