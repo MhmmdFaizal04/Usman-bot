@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import { InputError, previousDate, reconciliation, renderReports, validDate, witaDate, type Snapshot } from './report.js';
+import { renderValinsReports, type ValinsKind, type ValinsScope, type ValinsSnapshot } from './valins.js';
 
 let client: ReturnType<typeof postgres> | undefined;
 export function database(url: string): ReturnType<typeof postgres> {
@@ -77,6 +78,37 @@ export class Store {
       SELECT reports FROM daily_snapshots WHERE chat_id = ${chatId} ORDER BY report_date DESC LIMIT 1
     `;
     return rows[0]?.reports ?? ['Belum ada laporan untuk tanggal tersebut. Upload CSV terlebih dahulu.'];
+  }
+
+  async prepareValinsUpload(updateId: number, chatId: string, messageId: number, timestamp: number, snapshot: ValinsSnapshot, date = witaDate(timestamp)): Promise<void> {
+    if (!validDate(date)) throw new InputError('Tanggal laporan tidak valid.');
+    await this.sql.begin(async tx => {
+      await tx`SELECT pg_advisory_xact_lock(hashtextextended(${chatId}, 0))`;
+      const existing = await tx`SELECT update_id FROM telegram_jobs WHERE update_id = ${updateId}`;
+      if (existing.length) return;
+      await tx`
+        INSERT INTO valins_snapshots (chat_id, report_date, source_time, source_order, snapshot)
+        VALUES (${chatId}, ${date}::date, ${timestamp}, ${messageId}, ${tx.json(snapshot as unknown as postgres.JSONValue)})
+        ON CONFLICT (chat_id, report_date) DO UPDATE SET
+          source_time = EXCLUDED.source_time, source_order = EXCLUDED.source_order,
+          uploaded_at = NOW(), snapshot = EXCLUDED.snapshot
+        WHERE (valins_snapshots.source_time, valins_snapshots.source_order) < (EXCLUDED.source_time, EXCLUDED.source_order)
+      `;
+      const messages = renderValinsReports(snapshot);
+      await tx`INSERT INTO telegram_jobs (update_id, chat_id, messages)
+        VALUES (${updateId}, ${chatId}, ${tx.json(messages)})`;
+    });
+  }
+
+  async valinsReport(chatId: string, kind: ValinsKind = 'all', scope: ValinsScope = 'PARE-PARE', date?: string): Promise<string[]> {
+    const rows = date ? await this.sql<{ snapshot: ValinsSnapshot }[]>`
+      SELECT snapshot FROM valins_snapshots WHERE chat_id = ${chatId} AND report_date = ${date}::date
+    ` : await this.sql<{ snapshot: ValinsSnapshot }[]>`
+      SELECT snapshot FROM valins_snapshots WHERE chat_id = ${chatId} ORDER BY report_date DESC LIMIT 1
+    `;
+    return rows[0] ? renderValinsReports(rows[0].snapshot, kind, scope) : [
+      'Belum ada data VALINS untuk pilihan ini. Kirim file .xlsx dengan Sheet1 sesuai template REPORT VALINS ODP & ODC. Setelah upload, bot mengirim 2 laporan PARE-PARE.\n\n/valins — kedua laporan\n/valins_visit — VISIT ODP\n/valins_dc — DC QR CODE & SERVICE\nTambahkan branch dan/atau tanggal, misalnya /valins bone 2026-10-27. H-1 dibaca langsung dari Excel.'
+    ];
   }
 
   async claim(updateId: number, owner: string): Promise<Job | null> {

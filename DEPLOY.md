@@ -3,7 +3,7 @@
 ## Yang sudah disiapkan
 
 - Source bot berada di folder proyek ini.
-- Token bot **@usmanreport_bot**, koneksi Neon, dan webhook secret sudah diisi dalam **`.env` lokal**.
+- Token bot **@reportsulbagsel_bot**, koneksi Neon, dan webhook secret sudah diisi dalam **`.env` lokal**.
 - Tabel Neon sudah dibuat: `daily_snapshots` dan `telegram_jobs`.
 - Bot terbuka untuk semua pengguna, tanpa ID akun yang perlu didaftarkan.
 - Snapshot dashboard lama tidak dimasukkan ke database.
@@ -66,7 +66,7 @@ Command ini menghubungkan bot ke `https://nama-project-anda.vercel.app/api/teleg
 
 ## 4. Uji bot
 
-1. Buka **https://t.me/usmanreport_bot**.
+1. Buka **https://t.me/reportsulbagsel_bot**.
 2. Kirim `/start`.
 3. Upload CSV sebagai dokumen.
 4. Bot mengirim empat laporan branch, ditambah catatan jika ada tiket di luar cakupan.
@@ -94,3 +94,9 @@ npm run build
 ```
 
 `connections:check` memeriksa koneksi Neon dan token Telegram. `db:check` menguji penyimpanan dalam transaksi yang di-rollback. Kedua command tidak mendaftarkan webhook atau mengirim laporan ke pengguna.
+
+## Fitur baru VALINS
+
+Setelah source terbaru diupload dan di-deploy, jalankan `npm run webhook:set` untuk memperbarui menu command. Tabel `valins_snapshots` sudah dibuat pada database proyek; jika menggunakan database lain, jalankan `npm run db:setup` terlebih dahulu.
+
+Kirim `/menu`, lalu upload Excel `.xlsx`. Bot membaca **Sheet1** dan mengirim dua laporan PARE-PARE. `/valins_visit` mengambil laporan VISIT ODP, `/valins_dc` mengambil laporan DC, dan `/valins semua` mengambil kedua laporan untuk empat branch. H-1 VALINS berasal dari kolom Excel, sehingga tersedia sejak upload pertama jika workbook memuat nilainya. Panduan rumus dan contoh command tersedia di [VALINS.md](VALINS.md).

@@ -4,6 +4,8 @@ import { randomUUID, randomInt } from 'node:crypto';
 import postgres from 'postgres';
 import { parseSnapshot } from '../src/report.js';
 import { Store } from '../src/store.js';
+import { readFile } from 'node:fs/promises';
+import { parseValinsWorkbook, renderValinsReports } from '../src/valins.js';
 
 // Opt-in integration check against the configured database. Every write is rolled back.
 if (!process.env.DATABASE_URL) throw new Error('Isi DATABASE_URL terlebih dahulu.');
@@ -11,6 +13,7 @@ const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false, connect
 const rollback = new Error('INTEGRATION_CHECK_ROLLBACK');
 let verified = false;
 try {
+  const workbook = process.argv[2] ? await parseValinsWorkbook(await readFile(process.argv[2])) : null;
   await sql.begin(async tx => {
     await tx`SET LOCAL statement_timeout = '15s'`;
     // Store transactions become SAVEPOINTs inside this disposable outer transaction.
@@ -82,6 +85,25 @@ try {
     await store.prepareUpload(base - 9, reversedChat, 1, stamp(27, 8), snapshot(3), '2026-10-26');
     await store.prepareUpload(base - 10, reversedChat, 2, stamp(27, 9), snapshot(2), '2026-10-25');
     assert.match((await store.report(reversedChat, '2026-10-26'))[3]!, /SALDO \(H-1\): 2\n/);
+
+    if (workbook) {
+      const valinsChat = `integration-check:${randomUUID()}`;
+      const expected = renderValinsReports(workbook);
+      await store.prepareValinsUpload(base - 11, valinsChat, 2, stamp(27, 9), workbook, '2026-10-26');
+      assert.deepEqual(await store.valinsReport(valinsChat, 'all', 'PARE-PARE', '2026-10-26'), expected);
+      assert.deepEqual((await store.getJob(base - 11))?.messages, expected);
+      // The first VALINS upload already has growth from the workbook, not daily_snapshots.
+      assert.ok(expected.every(report => !report.includes('GROWTH (H VS H-1): Belum tersedia')));
+      assert.equal((await store.valinsReport(valinsChat, 'dc', 'SEMUA')).length, 4);
+      assert.equal((await store.report(valinsChat)).length, 1); // No UNSPEC data was created.
+      await store.prepareValinsUpload(base - 11, valinsChat, 2, stamp(27, 9), workbook, '2026-10-25');
+      assert.equal((await tx`SELECT report_date FROM valins_snapshots WHERE chat_id = ${valinsChat}`).length, 1);
+      await store.prepareValinsUpload(base - 12, valinsChat, 1, stamp(27, 8), workbook, '2026-10-26');
+      const last = await tx<{ source_order: string }[]>`SELECT source_order::text FROM valins_snapshots WHERE chat_id = ${valinsChat}`;
+      assert.equal(last[0]?.source_order, '2');
+      assert.match((await store.valinsReport(`${valinsChat}-other`))[0]!, /Belum ada data VALINS/);
+      console.log('Uji VALINS lulus: file Excel, H-1 bawaan, pemilihan laporan/branch, isolasi UNSPEC/chat, dan retry.');
+    }
     verified = true;
     throw rollback;
   });

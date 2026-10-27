@@ -6,5 +6,6 @@ dist/
 !.env.example
 *.log
 *.csv
+*.xlsx
 unspec-riwayat*.json
 UNSPEC-*.html

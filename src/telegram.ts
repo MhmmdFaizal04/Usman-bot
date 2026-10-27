@@ -1,4 +1,5 @@
 import { InputError, MAX_CSV_BYTES } from './report.js';
+import { MAX_XLSX_BYTES } from './valins.js';
 
 export interface TelegramMessage {
   message_id: number;
@@ -48,11 +49,26 @@ export class Telegram {
   }
 
   async downloadCsv(document: NonNullable<TelegramMessage['document']>): Promise<string> {
-    if (!document.file_name?.toLowerCase().endsWith('.csv')) throw new InputError('Kirim file berekstensi .csv sebagai dokumen.');
-    if ((document.file_size ?? 0) > MAX_CSV_BYTES) throw new InputError('Ukuran CSV maksimal 10 MB.');
+    const bytes = await this.downloadDocument(document, '.csv', 'CSV', MAX_CSV_BYTES);
+    try {
+      if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le', { fatal: true }).decode(bytes);
+      if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be', { fatal: true }).decode(bytes);
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch {
+      throw new InputError('Encoding CSV tidak didukung. Simpan ulang sebagai CSV UTF-8.');
+    }
+  }
+
+  async downloadXlsx(document: NonNullable<TelegramMessage['document']>): Promise<Buffer> {
+    return this.downloadDocument(document, '.xlsx', 'Excel', MAX_XLSX_BYTES);
+  }
+
+  private async downloadDocument(document: NonNullable<TelegramMessage['document']>, extension: string, label: string, maximum: number): Promise<Buffer> {
+    if (!document.file_name?.toLowerCase().endsWith(extension)) throw new InputError(`Kirim file berekstensi ${extension} sebagai dokumen.`);
+    if ((document.file_size ?? 0) > maximum) throw new InputError(`Ukuran ${label} maksimal 10 MB.`);
     const file = await this.call<{ file_path?: string; file_size?: number }>('getFile', { file_id: document.file_id });
     if (!file.file_path) throw new TelegramError(502);
-    if ((file.file_size ?? 0) > MAX_CSV_BYTES) throw new InputError('Ukuran CSV maksimal 10 MB.');
+    if ((file.file_size ?? 0) > maximum) throw new InputError(`Ukuran ${label} maksimal 10 MB.`);
     let response: Response;
     try {
       response = await fetch(`https://api.telegram.org/file/bot${this.token}/${file.file_path}`, {
@@ -69,9 +85,9 @@ export class Telegram {
         const { done, value } = await reader.read();
         if (done) break;
         size += value.byteLength;
-        if (size > MAX_CSV_BYTES) {
+        if (size > maximum) {
           await reader.cancel();
-          throw new InputError('Ukuran CSV maksimal 10 MB.');
+          throw new InputError(`Ukuran ${label} maksimal 10 MB.`);
         }
         chunks.push(value);
       }
@@ -79,13 +95,6 @@ export class Telegram {
       if (error instanceof InputError) throw error;
       throw new TelegramError(503);
     }
-    const bytes = Buffer.concat(chunks);
-    try {
-      if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le', { fatal: true }).decode(bytes);
-      if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be', { fatal: true }).decode(bytes);
-      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    } catch {
-      throw new InputError('Encoding CSV tidak didukung. Simpan ulang sebagai CSV UTF-8.');
-    }
+    return Buffer.concat(chunks);
   }
 }

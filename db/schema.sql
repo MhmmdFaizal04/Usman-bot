@@ -21,3 +21,14 @@ CREATE TABLE IF NOT EXISTS telegram_jobs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   completed_at TIMESTAMPTZ
 );
+
+-- Terpisah dari UNSPEC; H-1 VALINS berasal dari kolom M/Y dalam Sheet1 Excel.
+CREATE TABLE IF NOT EXISTS valins_snapshots (
+  chat_id TEXT NOT NULL,
+  report_date DATE NOT NULL,
+  source_time BIGINT NOT NULL,
+  source_order BIGINT NOT NULL,
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  snapshot JSONB NOT NULL,
+  PRIMARY KEY (chat_id, report_date)
+);

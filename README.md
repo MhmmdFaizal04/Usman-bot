@@ -1,10 +1,12 @@
-# Bot Telegram Laporan UNSPEC Sulbagsel
+# Bot Telegram Laporan UNSPEC & VALINS Sulbagsel
 
 Upload CSV di Telegram → bot mengirim empat laporan: **BONE, KENDARI, MAKASSAR, PARE-PARE**. Aplikasi siap untuk deployment manual ke Vercel.
 
+Upload Excel `.xlsx` → bot membaca **Sheet1** dan mengirim **VALINS VISIT ODP** serta **VALINS DC QR CODE & SERVICE**, default branch **PARE-PARE**. Panduan penggunaan dan rumus lengkap tersedia di **[VALINS.md](VALINS.md)**.
+
 Panduan singkat untuk deployment proyek yang sudah dikonfigurasi tersedia di **[DEPLOY.md](DEPLOY.md)**.
 
-## Perilaku laporan
+## Perilaku laporan UNSPEC
 
 - CSV baru maupun lama diterima. Tanggal tiket tidak dijadikan tanggal laporan.
 - Bot terbuka untuk **semua pengguna Telegram**, tanpa pendaftaran ID akun. Riwayat dipisahkan per chat.
@@ -177,12 +179,13 @@ Untuk grup, tambahkan bot dan izinkan mengirim pesan. Jika dokumen grup tidak di
 api/telegram.ts       Endpoint webhook Telegram
 api/health.ts         Status server
 src/report.ts         Parser CSV dan format laporan
+src/valins.ts         Parser Sheet1 dan dua format laporan VALINS
 src/master.ts         Master STO/LIS dari dashboard
 src/store.ts          Snapshot harian dan status pengiriman
 src/telegram.ts       Telegram API dan download file
 db/schema.sql         Tabel PostgreSQL
 scripts/              Setup database, webhook, preview
-tests/                Uji parsing, kalkulasi, akses, Telegram API
+tests/                Uji CSV/Excel, kalkulasi, akses, Telegram API
 public/               Halaman status publik
 vercel.json           Konfigurasi deployment
 ```

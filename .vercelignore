@@ -4,6 +4,7 @@ dist
 .env
 .env.*
 *.csv
+*.xlsx
 unspec-riwayat*.json
 UNSPEC-*.html
 tests

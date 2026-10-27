@@ -4,9 +4,17 @@ import { getConfig } from '../src/config.js';
 import { InputError, parseSnapshot, resolveReportDate, validDate } from '../src/report.js';
 import { database, Store } from '../src/store.js';
 import { Telegram, TelegramError, type TelegramUpdate } from '../src/telegram.js';
+import { parseValinsArguments, parseValinsWorkbook } from '../src/valins.js';
 
 const HELP = [
-  '👋 Bot laporan UNSPEC Sulbagsel', '',
+  '👋 Bot laporan Sulbagsel', '',
+  'PILIH FITUR',
+  '/unspec — petunjuk laporan UNSPEC dari CSV',
+  '/valins — dua laporan VALINS dari Excel (default PARE-PARE)',
+  '/valins_visit — laporan VALINS VISIT ODP tersimpan',
+  '/valins_dc — laporan VALINS DC QR CODE & SERVICE tersimpan',
+  'Tambahkan branch jika perlu: /valins bone, /valins makassar, /valins kendari, /valins semua.',
+  'Upload .xlsx otomatis membaca Sheet1 dan mengirim kedua laporan VALINS PARE-PARE. Growth/H-1 VALINS berasal langsung dari Excel.', '',
   'Kirim CSV sebagai dokumen untuk mendapatkan 4 laporan: BONE, KENDARI, MAKASSAR, dan PARE-PARE.',
   'CSV lama maupun baru dapat diproses. Tanpa caption, tanggal laporan mengikuti waktu pengiriman dokumen (WITA).',
   'Untuk data hari lain, beri caption tanggal=YYYY-MM-DD saat mengirim CSV. Contoh: file tanggal 25 diberi caption tanggal=2026-10-25, lalu file tanggal 26 diberi caption tanggal=2026-10-26 agar H-1 muncul.',
@@ -14,7 +22,7 @@ const HELP = [
   'Upload berkali-kali diperbolehkan. File terakhir menjadi snapshot hari tersebut. Saldo H-1 menggunakan snapshot hari sebelumnya di chat yang sama.', '',
   '/report — kirim ulang laporan terbaru',
   '/report 2026-10-27 — laporan tanggal tertentu',
-  '/help — petunjuk penggunaan', '',
+  '/menu atau /help — petunjuk penggunaan', '',
   'Kolom wajib: INCIDENT dan WORKZONE. Jika SUMMARY tersedia, hanya tiket UNSPEC yang dihitung. Tiket berstatus CLOSED/RESOLVED/CANCELLED dikecualikan. CSV maksimal 10 MB.',
   'Upload harus berupa export lengkap karena STO yang tidak muncul dihitung saldo 0. Data LIS mengacu master dashboard.'
 ].join('\n');
@@ -59,14 +67,27 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       try {
         if (message.document) {
           const reportDate = resolveReportDate(message.caption, message.date);
-          const csv = await telegram.downloadCsv(message.document);
-          const snapshot = parseSnapshot(csv);
-          await store.prepareUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate);
+          const filename = message.document.file_name?.toLowerCase() ?? '';
+          if (filename.endsWith('.xlsx')) {
+            const bytes = await telegram.downloadXlsx(message.document);
+            const snapshot = await parseValinsWorkbook(bytes);
+            await store.prepareValinsUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate);
+          } else if (filename.endsWith('.csv')) {
+            const csv = await telegram.downloadCsv(message.document);
+            const snapshot = parseSnapshot(csv);
+            await store.prepareUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate);
+          } else {
+            throw new InputError('Kirim .csv untuk UNSPEC atau .xlsx untuk VALINS.');
+          }
         } else {
           const [rawCommand, date, ...extra] = (message.text ?? '').trim().split(/\s+/);
           const command = rawCommand?.split('@')[0]?.toLowerCase();
           let messages: string[];
-          if (command === '/report') {
+          if (command === '/valins' || command === '/valins_visit' || command === '/valins_dc') {
+            const options = parseValinsArguments([date, ...extra].filter((value): value is string => Boolean(value)));
+            const kind = command === '/valins_visit' ? 'visit' : command === '/valins_dc' ? 'dc' : 'all';
+            messages = await store.valinsReport(chatId, kind, options.scope, options.date);
+          } else if (command === '/report') {
             if (extra.length || (date && !validDate(date))) throw new InputError('Gunakan /report atau /report YYYY-MM-DD dengan tanggal yang valid.');
             messages = await store.report(chatId, date);
           } else {

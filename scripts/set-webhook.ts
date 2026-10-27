@@ -15,7 +15,12 @@ try {
   });
   await telegram.call('setMyCommands', { commands: [
     { command: 'start', description: 'Petunjuk penggunaan bot' },
-    { command: 'help', description: 'Bantuan upload CSV' },
+    { command: 'menu', description: 'Pilih fitur UNSPEC atau VALINS' },
+    { command: 'help', description: 'Bantuan upload CSV dan Excel' },
+    { command: 'unspec', description: 'Laporan UNSPEC dari CSV' },
+    { command: 'valins', description: 'Dua laporan VALINS (default PARE-PARE)' },
+    { command: 'valins_visit', description: 'Laporan VALINS VISIT ODP' },
+    { command: 'valins_dc', description: 'Laporan VALINS DC QR CODE & SERVICE' },
     { command: 'report', description: 'Kirim ulang laporan terbaru' }
   ] });
   const info = await telegram.call<{ url: string; pending_update_count: number; last_error_message?: string }>('getWebhookInfo', {});
