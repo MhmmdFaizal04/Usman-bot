@@ -87,9 +87,9 @@ export function validDate(value: string): boolean {
 }
 export function resolveReportDate(caption: string | undefined, timestampSeconds: number): string {
   if (!caption?.trim()) return witaDate(timestampSeconds);
-  const match = /^tanggal\s*=\s*(\S+)$/i.exec(caption.trim());
+  const match = /^(?:tanggal\s*=\s*)?(\S+)$/i.exec(caption.trim());
   if (!match?.[1] || !validDate(match[1])) {
-    throw new InputError('Caption tanggal tidak valid. Gunakan tanggal=YYYY-MM-DD, misalnya tanggal=2026-10-25, atau kosongkan untuk tanggal upload WITA.');
+    throw new InputError('Caption tanggal tidak valid. Gunakan YYYY-MM-DD atau tanggal=YYYY-MM-DD, misalnya 2026-10-25, atau kosongkan untuk tanggal upload WITA.');
   }
   return match[1];
 }

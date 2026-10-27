@@ -10,6 +10,7 @@ const HELP = [
   'Kirim CSV sebagai dokumen untuk mendapatkan 4 laporan: BONE, KENDARI, MAKASSAR, dan PARE-PARE.',
   'CSV lama maupun baru dapat diproses. Tanpa caption, tanggal laporan mengikuti waktu pengiriman dokumen (WITA).',
   'Untuk data hari lain, beri caption tanggal=YYYY-MM-DD saat mengirim CSV. Contoh: file tanggal 25 diberi caption tanggal=2026-10-25, lalu file tanggal 26 diberi caption tanggal=2026-10-26 agar H-1 muncul.',
+  'Caption berupa tanggal saja, seperti 2026-10-25, juga diterima.',
   'Upload berkali-kali diperbolehkan. File terakhir menjadi snapshot hari tersebut. Saldo H-1 menggunakan snapshot hari sebelumnya di chat yang sama.', '',
   '/report — kirim ulang laporan terbaru',
   '/report 2026-10-27 — laporan tanggal tertentu',

@@ -80,6 +80,8 @@ H-1 otomatis tersedia setelah ada snapshot hari sebelumnya di chat yang sama. Un
 
 Tanpa caption, bot tetap menggunakan tanggal upload WITA. Jika file hari sebelumnya diupload belakangan, gunakan `/report 2026-10-26` untuk melihat pembanding yang telah diperbarui.
 
+Anda juga bisa menulis caption tanggal saja, misalnya `2026-10-25` atau `2026-10-26`.
+
 Semua anggota dalam satu grup menggunakan snapshot grup tersebut; chat lain memiliki riwayat sendiri.
 
 ## Pemeriksaan lokal opsional

@@ -10,6 +10,7 @@ Panduan singkat untuk deployment proyek yang sudah dikonfigurasi tersedia di **[
 - Bot terbuka untuk **semua pengguna Telegram**, tanpa pendaftaran ID akun. Riwayat dipisahkan per chat.
 - Tanpa caption, tanggal laporan adalah **tanggal pesan dokumen dikirim, zona WITA (Asia/Makassar)**. Jika webhook terlambat diproses, tanggal tetap mengikuti pengiriman awal, bukan waktu retry.
 - Untuk file hari lain, beri caption **`tanggal=YYYY-MM-DD`** saat mengirim dokumen. Contoh: upload `export (35).csv` dengan `tanggal=2026-10-25`, lalu `export (36).csv` dengan `tanggal=2026-10-26`. H-1 laporan tanggal 26 berasal dari snapshot tanggal 25 meskipun keduanya diupload pada hari yang sama.
+- Caption tanggal tanpa awalan juga diterima, misalnya **`2026-10-25`**. Tanggal tidak valid seperti `2026-02-30` tetap ditolak.
 - Jika snapshot hari sebelumnya baru diupload/dikoreksi belakangan, laporan hari berikutnya yang tersimpan otomatis diperbarui. Gunakan `/report YYYY-MM-DD` untuk mengambil versi terbaru; pesan lama yang sudah dikirim tidak diedit.
 - Setiap upload adalah snapshot lengkap, bukan penambahan tiket ke snapshot sebelumnya.
 - Upload berulang pada hari yang sama menghasilkan laporan baru. Pesan upload terakhir menjadi snapshot acuan hari itu, walaupun proses upload sebelumnya baru selesai belakangan.

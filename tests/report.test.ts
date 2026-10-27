@@ -102,7 +102,9 @@ test('caption dates separate historical exports uploaded on the same day', () =>
   assert.equal(resolveReportDate('  ', timestamp), '2026-10-27');
   assert.equal(resolveReportDate('tanggal=2026-10-25', timestamp), '2026-10-25');
   assert.equal(resolveReportDate('Tanggal = 2026-10-26', timestamp), '2026-10-26');
-  for (const caption of ['tanggal=2026-02-30', 'tanggal=25-10-2026', 'tanggal=', 'tanggal=2026-10-25 extra', '2026-10-25']) {
+  assert.equal(resolveReportDate('2026-10-25', timestamp), '2026-10-25');
+  assert.equal(resolveReportDate(' 2026-10-26 ', timestamp), '2026-10-26');
+  for (const caption of ['tanggal=2026-02-30', 'tanggal=25-10-2026', 'tanggal=', 'tanggal=2026-10-25 extra', '2026-02-30', '25-10-2026', '2026-10-25 extra']) {
     assert.throws(() => resolveReportDate(caption, timestamp), InputError);
   }
   const snapshot = parseSnapshot(csv('I1,WON,[UNSPEC],BACKEND'));
