@@ -8,7 +8,9 @@ Panduan singkat untuk deployment proyek yang sudah dikonfigurasi tersedia di **[
 
 - CSV baru maupun lama diterima. Tanggal tiket tidak dijadikan tanggal laporan.
 - Bot terbuka untuk **semua pengguna Telegram**, tanpa pendaftaran ID akun. Riwayat dipisahkan per chat.
-- Tanggal laporan adalah **tanggal pesan dokumen dikirim, zona WITA (Asia/Makassar)**. Jika webhook terlambat diproses, tanggal tetap mengikuti pengiriman awal, bukan waktu retry.
+- Tanpa caption, tanggal laporan adalah **tanggal pesan dokumen dikirim, zona WITA (Asia/Makassar)**. Jika webhook terlambat diproses, tanggal tetap mengikuti pengiriman awal, bukan waktu retry.
+- Untuk file hari lain, beri caption **`tanggal=YYYY-MM-DD`** saat mengirim dokumen. Contoh: upload `export (35).csv` dengan `tanggal=2026-10-25`, lalu `export (36).csv` dengan `tanggal=2026-10-26`. H-1 laporan tanggal 26 berasal dari snapshot tanggal 25 meskipun keduanya diupload pada hari yang sama.
+- Jika snapshot hari sebelumnya baru diupload/dikoreksi belakangan, laporan hari berikutnya yang tersimpan otomatis diperbarui. Gunakan `/report YYYY-MM-DD` untuk mengambil versi terbaru; pesan lama yang sudah dikirim tidak diedit.
 - Setiap upload adalah snapshot lengkap, bukan penambahan tiket ke snapshot sebelumnya.
 - Upload berulang pada hari yang sama menghasilkan laporan baru. Pesan upload terakhir menjadi snapshot acuan hari itu, walaupun proses upload sebelumnya baru selesai belakangan.
 - H-1 menggunakan snapshot terakhir pada **tepat satu hari sebelumnya di chat yang sama**. Jika tidak tersedia, saldo H-1 dan growth bertuliskan `Belum tersedia`.
@@ -137,7 +139,7 @@ Script mendaftarkan `/api/telegram`, secret verifikasi, serta menu command bot. 
 1. Buka bot dan kirim `/start`.
 2. Kirim CSV sebagai **dokumen/file**, bukan screenshot.
 3. Tunggu empat laporan. Data di luar cakupan akan dijelaskan melalui catatan tambahan.
-4. Upload CSV lagi jika ada perubahan hari yang sama.
+4. Upload CSV lagi jika ada perubahan hari yang sama. Untuk data tanggal lain, isi caption `tanggal=YYYY-MM-DD` ketika mengirim file; caption lain yang tidak sesuai format akan ditolak agar tanggal tidak keliru.
 
 Command:
 
@@ -188,7 +190,7 @@ vercel.json           Konfigurasi deployment
 
 - **Bot diam:** periksa webhook production, Deployment Protection, dan log function Vercel.
 - **Database belum siap:** jalankan `npm run db:setup` dengan connection string yang sama seperti production.
-- **H-1 kosong:** upload CSV pada hari sebelumnya di chat yang sama diperlukan. Upload berulang hari ini tidak menggantikan H-1.
+- **H-1 kosong:** harus ada snapshot tanggal sebelumnya di chat yang sama. Anda bisa mengisi data historis dengan caption `tanggal=YYYY-MM-DD`. Dua file yang diupload hari ini tanpa caption sama-sama dianggap snapshot hari ini, bukan otomatis dua tanggal berbeda.
 - **Laporan tidak lengkap karena gangguan sementara:** Telegram mengulang webhook; bot melanjutkan dari pesan yang belum tercatat terkirim. `/report` juga bisa digunakan untuk mengirim ulang laporan tersimpan.
 - Dalam kondisi jarang ketika Telegram sudah menerima pesan tetapi koneksi terputus sebelum aplikasi menerima konfirmasi/menyimpan status, pesan tersebut bisa terkirim ulang saat retry. Telegram tidak menyediakan idempotency key untuk `sendMessage`.
 - Tidak ada proses background yang dibiarkan berjalan setelah response. Semua pengiriman di-`await`, dan status tersimpan sebelum response sukses.

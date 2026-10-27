@@ -7,6 +7,7 @@ export interface TelegramMessage {
   from?: { id: number; is_bot?: boolean };
   chat: { id: number; type?: string };
   text?: string;
+  caption?: string;
   document?: { file_id: string; file_name?: string; file_size?: number };
 }
 export interface TelegramUpdate { update_id: number; message?: TelegramMessage }

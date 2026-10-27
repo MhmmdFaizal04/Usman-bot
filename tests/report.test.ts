@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BRANCHES } from '../src/master.js';
-import { InputError, parseSnapshot, previousDate, reconciliation, renderReports, witaDate } from '../src/report.js';
+import { InputError, parseSnapshot, previousDate, reconciliation, renderReports, resolveReportDate, witaDate } from '../src/report.js';
 
 const csv = (...rows: string[]): string => ['INCIDENT,WORKZONE,SUMMARY,STATUS', ...rows].join('\n');
 const timestamp = Date.parse('2026-10-27T09:00:00+08:00') / 1000;
@@ -95,4 +95,18 @@ test('WITA midnight and month/year boundaries choose exact previous calendar day
   assert.equal(previousDate('2026-11-01'), '2026-10-31');
   assert.equal(previousDate('2027-01-01'), '2026-12-31');
   assert.equal(previousDate('2028-03-01'), '2028-02-29');
+});
+
+test('caption dates separate historical exports uploaded on the same day', () => {
+  assert.equal(resolveReportDate(undefined, timestamp), '2026-10-27');
+  assert.equal(resolveReportDate('  ', timestamp), '2026-10-27');
+  assert.equal(resolveReportDate('tanggal=2026-10-25', timestamp), '2026-10-25');
+  assert.equal(resolveReportDate('Tanggal = 2026-10-26', timestamp), '2026-10-26');
+  for (const caption of ['tanggal=2026-02-30', 'tanggal=25-10-2026', 'tanggal=', 'tanggal=2026-10-25 extra', '2026-10-25']) {
+    assert.throws(() => resolveReportDate(caption, timestamp), InputError);
+  }
+  const snapshot = parseSnapshot(csv('I1,WON,[UNSPEC],BACKEND'));
+  const report = renderReports(snapshot, null, timestamp, '2026-10-25')[3]!;
+  assert.match(report, /📅 25 Oktober 2026\n/);
+  assert.match(report, /🕒 Diupload: 27 Oktober 2026/);
 });

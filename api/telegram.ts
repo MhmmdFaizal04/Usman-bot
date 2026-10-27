@@ -1,14 +1,15 @@
 import type { ApiRequest, ApiResponse } from '../src/http.js';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../src/config.js';
-import { InputError, parseSnapshot } from '../src/report.js';
+import { InputError, parseSnapshot, resolveReportDate, validDate } from '../src/report.js';
 import { database, Store } from '../src/store.js';
 import { Telegram, TelegramError, type TelegramUpdate } from '../src/telegram.js';
 
 const HELP = [
   '👋 Bot laporan UNSPEC Sulbagsel', '',
   'Kirim CSV sebagai dokumen untuk mendapatkan 4 laporan: BONE, KENDARI, MAKASSAR, dan PARE-PARE.',
-  'CSV lama maupun baru dapat diproses. Tanggal laporan mengikuti waktu pengiriman dokumen (WITA), bukan tanggal tiket.',
+  'CSV lama maupun baru dapat diproses. Tanpa caption, tanggal laporan mengikuti waktu pengiriman dokumen (WITA).',
+  'Untuk data hari lain, beri caption tanggal=YYYY-MM-DD saat mengirim CSV. Contoh: file tanggal 25 diberi caption tanggal=2026-10-25, lalu file tanggal 26 diberi caption tanggal=2026-10-26 agar H-1 muncul.',
   'Upload berkali-kali diperbolehkan. File terakhir menjadi snapshot hari tersebut. Saldo H-1 menggunakan snapshot hari sebelumnya di chat yang sama.', '',
   '/report — kirim ulang laporan terbaru',
   '/report 2026-10-27 — laporan tanggal tertentu',
@@ -22,11 +23,6 @@ function verifySecret(actual: unknown, expected: string): boolean {
   const a = Buffer.from(actual);
   const b = Buffer.from(expected);
   return a.length === b.length && timingSafeEqual(a, b);
-}
-function validDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T12:00:00Z`);
-  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse): Promise<void> {
@@ -61,9 +57,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     if (!job) {
       try {
         if (message.document) {
+          const reportDate = resolveReportDate(message.caption, message.date);
           const csv = await telegram.downloadCsv(message.document);
           const snapshot = parseSnapshot(csv);
-          await store.prepareUpload(update.update_id, chatId, message.message_id, message.date, snapshot);
+          await store.prepareUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate);
         } else {
           const [rawCommand, date, ...extra] = (message.text ?? '').trim().split(/\s+/);
           const command = rawCommand?.split('@')[0]?.toLowerCase();

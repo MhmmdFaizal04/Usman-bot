@@ -80,18 +80,36 @@ export function parseSnapshot(text: string): Snapshot {
 export function witaDate(timestampSeconds: number): string {
   return new Date(timestampSeconds * 1000 + 8 * 3600 * 1000).toISOString().slice(0, 10);
 }
+export function validDate(value: string): boolean {
+  if (!/^[1-9]\d{3}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+}
+export function resolveReportDate(caption: string | undefined, timestampSeconds: number): string {
+  if (!caption?.trim()) return witaDate(timestampSeconds);
+  const match = /^tanggal\s*=\s*(\S+)$/i.exec(caption.trim());
+  if (!match?.[1] || !validDate(match[1])) {
+    throw new InputError('Caption tanggal tidak valid. Gunakan tanggal=YYYY-MM-DD, misalnya tanggal=2026-10-25, atau kosongkan untuk tanggal upload WITA.');
+  }
+  return match[1];
+}
 export function previousDate(date: string): string {
   const value = new Date(`${date}T12:00:00Z`);
   value.setUTCDate(value.getUTCDate() - 1);
   return value.toISOString().slice(0, 10);
 }
-export function updateLabel(timestampSeconds: number): string {
-  return new Intl.DateTimeFormat('id-ID', {
+export function updateLabel(timestampSeconds: number, reportDate = witaDate(timestampSeconds)): string {
+  const uploaded = new Intl.DateTimeFormat('id-ID', {
     timeZone: 'Asia/Makassar', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
   }).format(new Date(timestampSeconds * 1000)).replace(' pukul ', ' | Update ') + ' WITA';
+  if (reportDate === witaDate(timestampSeconds)) return uploaded;
+  const label = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Makassar', day: 'numeric', month: 'long', year: 'numeric'
+  }).format(new Date(`${reportDate}T12:00:00+08:00`));
+  return `${label}\n🕒 Diupload: ${uploaded}`;
 }
 
-export function renderReports(snapshot: Snapshot, previous: Snapshot | null, timestampSeconds: number): string[] {
+export function renderReports(snapshot: Snapshot, previous: Snapshot | null, timestampSeconds: number, reportDate = witaDate(timestampSeconds)): string[] {
   return BRANCHES.map(branch => {
     const current = snapshot.branches[branch];
     const old = previous?.branches[branch];
@@ -110,7 +128,7 @@ export function renderReports(snapshot: Snapshot, previous: Snapshot | null, tim
     const highest = bad[0];
     return [
       `📊 SUMMARY PERFORMANSI UNSPEC – BRANCH ${branch}`,
-      `📅 ${updateLabel(timestampSeconds)}`, '',
+      `📅 ${updateLabel(timestampSeconds, reportDate)}`, '',
       `SALDO (H): ${integer.format(current.saldo)}`,
       `SALDO (H-1): ${old ? integer.format(old.saldo) : 'Belum tersedia'}`,
       `TARGET SALDO 0,10%: ${integer.format(Math.floor(current.lis / 1000))}`,

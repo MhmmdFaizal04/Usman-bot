@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import { previousDate, reconciliation, renderReports, witaDate, type Snapshot } from './report.js';
+import { InputError, previousDate, reconciliation, renderReports, validDate, witaDate, type Snapshot } from './report.js';
 
 let client: ReturnType<typeof postgres> | undefined;
 export function database(url: string): ReturnType<typeof postgres> {
@@ -28,8 +28,8 @@ export class Store {
     `;
   }
 
-  async prepareUpload(updateId: number, chatId: string, messageId: number, timestamp: number, snapshot: Snapshot): Promise<void> {
-    const date = witaDate(timestamp);
+  async prepareUpload(updateId: number, chatId: string, messageId: number, timestamp: number, snapshot: Snapshot, date = witaDate(timestamp)): Promise<void> {
+    if (!validDate(date)) throw new InputError('Tanggal laporan tidak valid.');
     await this.sql.begin(async tx => {
       // Serialise snapshot preparation for this chat, including simultaneous uploads.
       await tx`SELECT pg_advisory_xact_lock(hashtextextended(${chatId}, 0))`;
@@ -38,15 +38,29 @@ export class Store {
       const old = await tx<{ snapshot: Snapshot }[]>`
         SELECT snapshot FROM daily_snapshots WHERE chat_id = ${chatId} AND report_date = ${previousDate(date)}::date
       `;
-      const reports = renderReports(snapshot, old[0]?.snapshot ?? null, timestamp);
-      await tx`
+      const reports = renderReports(snapshot, old[0]?.snapshot ?? null, timestamp, date);
+      const changed = await tx`
         INSERT INTO daily_snapshots (chat_id, report_date, source_time, source_order, snapshot, reports)
         VALUES (${chatId}, ${date}::date, ${timestamp}, ${messageId}, ${tx.json(snapshot as unknown as postgres.JSONValue)}, ${tx.json(reports)})
         ON CONFLICT (chat_id, report_date) DO UPDATE SET
           source_time = EXCLUDED.source_time, source_order = EXCLUDED.source_order,
           uploaded_at = NOW(), snapshot = EXCLUDED.snapshot, reports = EXCLUDED.reports
         WHERE (daily_snapshots.source_time, daily_snapshots.source_order) < (EXCLUDED.source_time, EXCLUDED.source_order)
+        RETURNING report_date
       `;
+      if (changed.length) {
+        // Backfilled/corrected H-1 also updates an already stored next-day report.
+        // Messages sent earlier are retained; /report retrieves the corrected version.
+        const next = await tx<{ snapshot: Snapshot; source_time: string; date: string }[]>`
+          SELECT snapshot, source_time::text, report_date::text AS date FROM daily_snapshots
+          WHERE chat_id = ${chatId} AND report_date = ${date}::date + 1
+        `;
+        if (next[0]) {
+          const updated = renderReports(next[0].snapshot, snapshot, Number(next[0].source_time), next[0].date);
+          await tx`UPDATE daily_snapshots SET reports = ${tx.json(updated)}
+            WHERE chat_id = ${chatId} AND report_date = ${next[0].date}::date`;
+        }
+      }
       const note = reconciliation(snapshot);
       const messages = note ? [...reports, note] : reports;
       await tx`

@@ -72,7 +72,15 @@ Command ini menghubungkan bot ke `https://nama-project-anda.vercel.app/api/teleg
 4. Bot mengirim empat laporan branch, ditambah catatan jika ada tiket di luar cakupan.
 5. Upload lagi pada hari yang sama jika data berubah.
 
-H-1 otomatis tersedia setelah ada snapshot hari sebelumnya di chat yang sama. Semua anggota dalam satu grup menggunakan snapshot grup tersebut; chat lain memiliki riwayat sendiri.
+H-1 otomatis tersedia setelah ada snapshot hari sebelumnya di chat yang sama. Untuk mengupload dua file historis hari ini:
+
+1. Kirim `export (35).csv` dengan caption **`tanggal=2026-10-25`**.
+2. Kirim `export (36).csv` dengan caption **`tanggal=2026-10-26`**.
+3. Laporan tanggal 26 akan menggunakan data tanggal 25 sebagai H-1.
+
+Tanpa caption, bot tetap menggunakan tanggal upload WITA. Jika file hari sebelumnya diupload belakangan, gunakan `/report 2026-10-26` untuk melihat pembanding yang telah diperbarui.
+
+Semua anggota dalam satu grup menggunakan snapshot grup tersebut; chat lain memiliki riwayat sendiri.
 
 ## Pemeriksaan lokal opsional
 
