@@ -1,7 +1,7 @@
 import type { ApiRequest, ApiResponse } from '../src/http.js';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { getConfig } from '../src/config.js';
-import { InputError, parseSnapshot, resolveReportDate, validDate } from '../src/report.js';
+import { InputError, parseSnapshot, resolveCsvReportDate, resolveReportDate, validDate } from '../src/report.js';
 import { database, Store } from '../src/store.js';
 import { Telegram, TelegramError, type TelegramUpdate } from '../src/telegram.js';
 import { parseValinsArguments, parseValinsWorkbook } from '../src/valins.js';
@@ -19,7 +19,9 @@ const HELP = [
   '• VALINS ODP / DC: Excel (.xlsx), data di Sheet1.',
   '• Ukuran file maksimal 10 MB.', '',
   '📅 TANGGAL DATA',
-  'Tanpa caption, data disimpan pada tanggal upload WITA.',
+  '• CSV UNSPEC tanpa caption: tanggal data otomatis kemarin WITA.',
+  '  Contoh: upload tanggal 27 → data tanggal 26 → pembanding tanggal 25.',
+  '• Excel VALINS tanpa caption: tanggal arsip mengikuti tanggal upload WITA.',
   'Untuk tanggal lain, isi caption 2026-10-26 atau tanggal=2026-10-26 saat mengirim file.',
   'Anda boleh upload beberapa kali; file terakhir menjadi acuan tanggal tersebut.', '',
   '📈 PEMBANDING H-1',
@@ -77,9 +79,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
           await store.prepareMenu(update.update_id, chatId, userId, threadId, parseMenuAction(callback.data ?? ''));
         } else if (message.document) {
           const preference = await store.getPreference(chatId, userId, threadId);
-          const reportDate = resolveReportDate(message.caption, message.date);
           const filename = message.document.file_name?.toLowerCase() ?? '';
           if (filename.endsWith('.xlsx')) {
+            const reportDate = resolveReportDate(message.caption, message.date);
             if (preference?.kind === 'unspec') throw new InputError('Pilihan Anda UNSPEC. Kirim CSV (.csv), atau gunakan /start untuk memilih VALINS.');
             const bytes = await telegram.downloadXlsx(message.document);
             const snapshot = await parseValinsWorkbook(bytes);
@@ -87,6 +89,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
             await store.prepareValinsUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate,
               valinsKind(kind), 'PARE-PARE', { kind, userId, threadId });
           } else if (filename.endsWith('.csv')) {
+            const reportDate = resolveCsvReportDate(message.caption, message.date);
             if (preference && preference.kind !== 'unspec') throw new InputError('Pilihan Anda VALINS. Kirim Excel (.xlsx), atau gunakan /start untuk memilih UNSPEC.');
             const csv = await telegram.downloadCsv(message.document);
             const snapshot = parseSnapshot(csv);

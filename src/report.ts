@@ -89,7 +89,7 @@ export function resolveReportDate(caption: string | undefined, timestampSeconds:
   if (!caption?.trim()) return witaDate(timestampSeconds);
   const match = /^(?:tanggal\s*=\s*)?(\S+)$/i.exec(caption.trim());
   if (!match?.[1] || !validDate(match[1])) {
-    throw new InputError('Caption tanggal tidak valid. Gunakan YYYY-MM-DD atau tanggal=YYYY-MM-DD, misalnya 2026-10-25, atau kosongkan untuk tanggal upload WITA.');
+    throw new InputError('Caption tanggal tidak valid. Gunakan YYYY-MM-DD atau tanggal=YYYY-MM-DD, misalnya 2026-10-25, atau kosongkan untuk tanggal otomatis.');
   }
   return match[1];
 }
@@ -97,6 +97,10 @@ export function previousDate(date: string): string {
   const value = new Date(`${date}T12:00:00Z`);
   value.setUTCDate(value.getUTCDate() - 1);
   return value.toISOString().slice(0, 10);
+}
+export function resolveCsvReportDate(caption: string | undefined, timestampSeconds: number): string {
+  // Export UNSPEC rutin berisi posisi sehari sebelum upload (WITA).
+  return caption?.trim() ? resolveReportDate(caption, timestampSeconds) : previousDate(witaDate(timestampSeconds));
 }
 export function updateLabel(timestampSeconds: number, reportDate = witaDate(timestampSeconds)): string {
   const uploaded = new Intl.DateTimeFormat('id-ID', {

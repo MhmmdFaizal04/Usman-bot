@@ -41,7 +41,8 @@ export function uploadPrompt(kind: ReportType): RichMessage {
       `📊 ${REPORT_LABELS[kind]}`, '',
       `📤 Silakan upload file ${kind === 'unspec' ? 'CSV (.csv)' : 'Excel (.xlsx)'}.`,
       'Setelah file diproses, tombol pilihan branch dan Cetak Semua akan muncul.', '',
-      '📅 Untuk data hari ini, cukup kirim file tanpa caption.',
+      kind === 'unspec' ? '📅 Tanpa caption, tanggal data otomatis kemarin WITA.' : '📅 Tanpa caption, tanggal arsip mengikuti tanggal upload WITA.',
+      ...(kind === 'unspec' ? ['Contoh: upload tanggal 27 → data tanggal 26 → pembanding tanggal 25.'] : []),
       'Untuk tanggal lain, isi caption tanggal, misalnya 2026-10-26.', '',
       ...(kind === 'unspec' ? ['📈 H-1 otomatis memakai data tanggal sebelumnya di chat yang sama.'] :
         ['📈 H-1 dan growth VALINS dibaca dari Sheet1 Excel.'])

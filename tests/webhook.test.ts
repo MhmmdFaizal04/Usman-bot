@@ -108,6 +108,7 @@ test('XLSX upload is parsed and stored as VALINS; VALINS command selects the req
     preference = { kind: 'unspec', scope: null };
     assert.equal(await run(14, { document: { file_id: 'file', file_name: 'report.csv' } }), 200);
     assert.equal(csv.mock.callCount(), 1);
+    assert.equal(csv.mock.calls[0]!.arguments[5], '2026-10-26');
     assert.deepEqual(csv.mock.calls[0]!.arguments[7], { kind: 'unspec', userId: '123', threadId: 0 });
     preference = { kind: 'unspec', scope: 'BONE' };
     assert.equal(await run(15, { document: { file_id: 'file', file_name: 'report.csv' } }), 200);

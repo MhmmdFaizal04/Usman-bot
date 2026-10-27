@@ -78,7 +78,7 @@ H-1 otomatis tersedia setelah ada snapshot hari sebelumnya di chat yang sama. Un
 2. Kirim `export (36).csv` dengan caption **`tanggal=2026-10-26`**.
 3. Laporan tanggal 26 akan menggunakan data tanggal 25 sebagai H-1.
 
-Tanpa caption, bot tetap menggunakan tanggal upload WITA. Jika file hari sebelumnya diupload belakangan, gunakan `/report 2026-10-26` untuk melihat pembanding yang telah diperbarui.
+Tanpa caption, **CSV UNSPEC dianggap data kemarin WITA**: upload tanggal 27 berarti data tanggal 26 dengan pembanding tanggal 25; upload tanggal 28 berarti data tanggal 27 dengan pembanding tanggal 26. Untuk tanggal lain, isi caption. Jika file hari sebelumnya diupload belakangan, gunakan `/report 2026-10-26` untuk melihat pembanding yang telah diperbarui.
 
 Anda juga bisa menulis caption tanggal saja, misalnya `2026-10-25` atau `2026-10-26`.
 
@@ -99,6 +99,6 @@ npm run build
 
 Setelah source terbaru diupload dan di-deploy, jalankan `npm run webhook:set` untuk memperbarui menu command. Tabel `valins_snapshots` sudah dibuat pada database proyek; jika menggunakan database lain, jalankan `npm run db:setup` terlebih dahulu.
 
-Kirim `/start`, pilih tombol **UNSPEC / VALINS ODP / VALINS DC / VALINS ODP DAN DC**, lalu **upload file terlebih dahulu**. Setelah file diproses, pilih **PARE-PARE / BONE / KENDARI / MAKASSAR / CETAK SEMUA**. Tombol cetak menggunakan tanggal data yang baru diupload. UNSPEC tanggal 27 mengambil H-1 dari snapshot tanggal 26 di chat yang sama; upload berulang tanggal 27 tidak mengubah pembandingnya menjadi upload sebelumnya pada tanggal 27. H-1 VALINS berasal dari kolom Excel. Panduan rumus dan contoh command tersedia di [VALINS.md](VALINS.md).
+Kirim `/start`, pilih tombol **UNSPEC / VALINS ODP / VALINS DC / VALINS ODP DAN DC**, lalu **upload file terlebih dahulu**. Setelah file diproses, pilih **PARE-PARE / BONE / KENDARI / MAKASSAR / CETAK SEMUA**. Tombol cetak menggunakan tanggal data yang baru diupload. CSV tanpa caption memakai tanggal data kemarin WITA; H-1 tetap satu hari sebelum tanggal data tersebut di chat yang sama. Upload berulang tidak mengubah H-1 menjadi upload sebelumnya pada hari yang sama. H-1 VALINS berasal dari kolom Excel; tanggal arsip Excel tanpa caption tetap tanggal upload. Panduan rumus dan contoh command tersedia di [VALINS.md](VALINS.md).
 
 Versi menu tombol memerlukan tabel `report_preferences` dan update webhook **`callback_query`**. Jalankan `npm run db:setup` untuk database lain dan `npm run webhook:set` setelah deploy. Tabel proyek saat ini sudah disiapkan.

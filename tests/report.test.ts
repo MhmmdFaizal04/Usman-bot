@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BRANCHES } from '../src/master.js';
-import { InputError, parseSnapshot, previousDate, reconciliation, renderReports, resolveReportDate, witaDate } from '../src/report.js';
+import { InputError, parseSnapshot, previousDate, reconciliation, renderReports, resolveCsvReportDate, resolveReportDate, witaDate } from '../src/report.js';
 
 const csv = (...rows: string[]): string => ['INCIDENT,WORKZONE,SUMMARY,STATUS', ...rows].join('\n');
 const timestamp = Date.parse('2026-10-27T09:00:00+08:00') / 1000;
@@ -111,4 +111,20 @@ test('caption dates separate historical exports uploaded on the same day', () =>
   const report = renderReports(snapshot, null, timestamp, '2026-10-25')[3]!;
   assert.match(report, /📅 25 Oktober 2026\n/);
   assert.match(report, /🕒 Diupload: 27 Oktober 2026/);
+});
+
+test('routine CSV uploaded on the 27th means data 26 / comparison 25; next upload day advances both dates', () => {
+  const upload27 = Date.parse('2026-10-27T09:00:00+08:00') / 1000;
+  const upload28 = Date.parse('2026-10-28T09:00:00+08:00') / 1000;
+  assert.equal(resolveCsvReportDate(undefined, upload27), '2026-10-26');
+  assert.equal(previousDate(resolveCsvReportDate(undefined, upload27)), '2026-10-25');
+  assert.equal(resolveCsvReportDate(' ', upload28), '2026-10-27');
+  assert.equal(previousDate(resolveCsvReportDate(undefined, upload28)), '2026-10-26');
+  assert.equal(resolveCsvReportDate(undefined, upload27 + 3600), '2026-10-26');
+  assert.equal(resolveCsvReportDate('2026-10-25', upload27), '2026-10-25');
+  assert.equal(resolveCsvReportDate('tanggal=2026-10-27', upload27), '2026-10-27');
+  assert.throws(() => resolveCsvReportDate('2026-02-30', upload27), InputError);
+  assert.equal(resolveCsvReportDate(undefined, Date.parse('2026-10-27T15:59:59Z') / 1000), '2026-10-26');
+  assert.equal(resolveCsvReportDate(undefined, Date.parse('2026-10-27T16:00:00Z') / 1000), '2026-10-27');
+  assert.equal(resolveCsvReportDate(undefined, Date.parse('2027-01-01T00:00:00+08:00') / 1000), '2026-12-31');
 });
