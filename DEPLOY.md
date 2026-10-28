@@ -102,3 +102,7 @@ Setelah source terbaru diupload dan di-deploy, jalankan `npm run webhook:set` un
 Kirim `/start`, pilih tombol **UNSPEC / VALINS ODP / VALINS DC / VALINS ODP DAN DC**, lalu **upload file terlebih dahulu**. Setelah file diproses, pilih **PARE-PARE / BONE / KENDARI / MAKASSAR / CETAK SEMUA**. Tombol cetak menggunakan tanggal data yang baru diupload. CSV tanpa caption memakai tanggal data kemarin WITA; H-1 tetap satu hari sebelum tanggal data tersebut di chat yang sama. Upload berulang tidak mengubah H-1 menjadi upload sebelumnya pada hari yang sama. H-1 VALINS berasal dari kolom Excel; tanggal arsip Excel tanpa caption tetap tanggal upload. Panduan rumus dan contoh command tersedia di [VALINS.md](VALINS.md).
 
 Versi menu tombol memerlukan tabel `report_preferences` dan update webhook **`callback_query`**. Jalankan `npm run db:setup` untuk database lain dan `npm run webhook:set` setelah deploy. Tabel proyek saat ini sudah disiapkan.
+
+## Fitur laporan bergambar
+
+Deploy source terbaru untuk mengaktifkan fitur **Reply/Balas laporan dengan foto**. Tidak ada environment variable atau migrasi database tambahan untuk fitur ini. Setelah bot mencetak laporan, balas pesan laporan tersebut dengan satu foto; bot mengirim ulang foto dengan caption teks laporan. Jika teks melebihi 1.024 karakter, foto dan laporan lengkap dikirim sebagai dua pesan yang dapat diteruskan bersama.

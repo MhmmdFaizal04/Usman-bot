@@ -74,7 +74,8 @@ export function selectedMenu(kind: ReportType, scope: ValinsScope, date: string)
       `✅ Pilihan: ${REPORT_LABELS[kind]} — ${scope === 'SEMUA' ? 'SEMUA BRANCH' : scope}`,
       `📅 Tanggal data: ${date}`, '',
       'Laporan dari file yang Anda upload sudah dicetak.',
-      'Gunakan tombol di bawah untuk mencetak branch lain atau mengupload file baru.'
+      'Gunakan tombol di bawah untuk mencetak branch lain atau mengupload file baru.', '',
+      '🖼 Untuk menambahkan gambar, Reply/Balas pesan laporan dengan satu foto.'
     ].join('\n'),
     reply_markup: { inline_keyboard: [
       [{ text: '🖨 Cetak Ulang', callback_data: `print:${kind}:${scope}:${date}` }],

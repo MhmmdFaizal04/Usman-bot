@@ -7,6 +7,7 @@ import { Telegram, TelegramError, type TelegramUpdate } from '../src/telegram.js
 import { parseValinsArguments, parseValinsWorkbook } from '../src/valins.js';
 import { mainMenu, parseMenuAction, valinsKind, type MenuAction } from '../src/menu.js';
 import type { OutgoingMessage } from '../src/messages.js';
+import { prepareReportPhoto } from '../src/report-photo.js';
 
 const HELP = [
   '📖 PANDUAN SINGKAT', '',
@@ -29,7 +30,11 @@ const HELP = [
   '• VALINS: menggunakan nilai H-1 yang tersedia di Excel.', '',
   '🖨 CETAK ULANG',
   'Gunakan tombol Cetak Ulang atau Ganti Branch setelah laporan dicetak.',
-  'Untuk memilih tanggal: /report 2026-10-26 atau /valins bone 2026-10-26.'
+  'Untuk memilih tanggal: /report 2026-10-26 atau /valins bone 2026-10-26.', '',
+  '🖼 LAPORAN BERGAMBAR',
+  'Reply/Balas pada pesan laporan bot, lalu kirim satu foto.',
+  'Bot mengirim ulang foto dengan teks laporan sebagai caption, siap diteruskan.',
+  'Jika teks terlalu panjang untuk caption, foto dan laporan lengkap dikirim sebagai dua pesan.'
 ].join('\n');
 
 function verifySecret(actual: unknown, expected: string): boolean {
@@ -77,6 +82,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
       try {
         if (callback) {
           await store.prepareMenu(update.update_id, chatId, userId, threadId, parseMenuAction(callback.data ?? ''));
+        } else if (message.photo?.length) {
+          const messages = prepareReportPhoto(message, config.token.split(':')[0]!);
+          await store.prepareMessages(update.update_id, chatId, messages);
         } else if (message.document) {
           const preference = await store.getPreference(chatId, userId, threadId);
           const filename = message.document.file_name?.toLowerCase() ?? '';

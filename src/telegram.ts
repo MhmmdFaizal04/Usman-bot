@@ -10,6 +10,8 @@ export interface TelegramMessage {
   chat: { id: number; type?: string };
   text?: string;
   caption?: string;
+  photo?: { file_id: string; width: number; height: number; file_size?: number }[];
+  reply_to_message?: TelegramMessage;
   document?: { file_id: string; file_name?: string; file_size?: number };
 }
 export interface TelegramCallbackQuery {
@@ -49,10 +51,21 @@ export class Telegram {
   }
 
   async send(chatId: string, message: OutgoingMessage, threadId?: number): Promise<void> {
+    const context = {
+      chat_id: chatId,
+      ...(threadId ? { message_thread_id: threadId } : {}),
+      ...(typeof message !== 'string' && message.reply_parameters ? { reply_parameters: message.reply_parameters } : {})
+    };
+    if (typeof message !== 'string' && message.type === 'photo') {
+      await this.call('sendPhoto', {
+        ...context, photo: message.photo,
+        ...(message.caption ? { caption: message.caption } : {})
+      });
+      return;
+    }
     await this.call('sendMessage', {
-      chat_id: chatId, text: typeof message === 'string' ? message : message.text,
-      ...(typeof message === 'string' || !message.reply_markup ? {} : { reply_markup: message.reply_markup }),
-      ...(threadId ? { message_thread_id: threadId } : {})
+      ...context, text: typeof message === 'string' ? message : message.text,
+      ...(typeof message === 'string' || !message.reply_markup ? {} : { reply_markup: message.reply_markup })
     });
   }
 

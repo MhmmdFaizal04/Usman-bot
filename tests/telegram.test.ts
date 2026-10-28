@@ -66,3 +66,20 @@ test('inline keyboard is sent with its message and topic; expired callbacks are 
   await telegram.answerCallback('expired');
   assert.deepEqual(payloads[1], { callback_query_id: 'expired' });
 });
+
+test('photo and full-text fallback use Telegram reply parameters and preserve the topic', async t => {
+  const calls: { url: string; body: Record<string, unknown> }[] = [];
+  t.mock.method(globalThis, 'fetch', async (url: string, options: RequestInit) => {
+    calls.push({ url, body: JSON.parse(String(options.body)) as Record<string, unknown> });
+    return Response.json({ ok: true, result: {} });
+  });
+  const telegram = new Telegram('test-token');
+  const reply = { message_id: 55, allow_sending_without_reply: true };
+  await telegram.send('-100123', { type: 'photo', photo: 'telegram-file-id', caption: 'laporan', reply_parameters: reply }, 42);
+  await telegram.send('-100123', { text: 'laporan lengkap', reply_parameters: reply }, 42);
+  assert.match(calls[0]!.url, /\/sendPhoto$/);
+  assert.deepEqual(calls[0]!.body, { chat_id: '-100123', message_thread_id: 42, photo: 'telegram-file-id', caption: 'laporan', reply_parameters: reply });
+  assert.match(calls[1]!.url, /\/sendMessage$/);
+  assert.deepEqual(calls[1]!.body, { chat_id: '-100123', message_thread_id: 42, text: 'laporan lengkap', reply_parameters: reply });
+  assert.equal('protect_content' in calls[0]!.body, false);
+});

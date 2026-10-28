@@ -21,6 +21,19 @@ Tombol **Cetak Ulang**, **Ganti Branch**, **Upload File Baru**, dan **Menu Utama
 
 Setelah deploy versi menu tombol, jalankan **`npm run webhook:set`** agar Telegram mengirim update `callback_query` dari tombol. Database menu dibuat dengan `npm run db:setup` (sudah dijalankan pada database proyek saat fitur dibangun).
 
+## Laporan bergambar melalui Reply/Balas
+
+1. Buat laporan UNSPEC atau VALINS seperti biasa.
+2. Pada **pesan laporan bot** yang ingin diberi gambar, pilih **Reply/Balas**.
+3. Kirim **satu foto** dari galeri Telegram.
+4. Bot membalas foto Anda dengan **foto yang sama dan teks laporan sebagai caption**. Pesan hasil bot dapat diteruskan/forward.
+
+Teks diambil dari laporan yang Anda balas, termasuk tanggal dan angka aslinya. Caption yang Anda tulis pada foto tidak mengganti teks laporan. Balasan ke menu, pesan pengguna, atau bot lain akan diberi petunjuk untuk membalas laporan bot ini.
+
+Jika teks laporan melampaui batas caption Telegram (**1.024 karakter**), bot mengirim **foto dan teks laporan lengkap sebagai dua pesan**, tanpa memotong isi. Untuk meneruskannya, pilih kedua pesan. Pengiriman menggunakan `file_id` foto Telegram, sehingga aplikasi tidak perlu mengunduh atau menyimpan gambar mentah. Grup/topic tetap didukung dan bot membalas di tempat foto dikirim.
+
+Laporan bergambar tidak mengubah snapshot data, tanggal laporan, H-1, atau pilihan menu. Status pengiriman memakai mekanisme retry yang sama dengan laporan biasa; jika foto sudah tercatat terkirim tetapi teks panjang gagal, retry melanjutkan teksnya.
+
 ## Perilaku laporan UNSPEC
 
 - CSV baru maupun lama diterima. Tanggal tiket tidak dijadikan tanggal laporan.
@@ -194,6 +207,7 @@ Untuk grup, tambahkan bot dan izinkan mengirim pesan. Jika dokumen grup tidak di
 api/telegram.ts       Endpoint webhook Telegram
 api/health.ts         Status server
 src/report.ts         Parser CSV dan format laporan
+src/report-photo.ts   Foto dengan caption laporan melalui Reply/Balas
 src/valins.ts         Parser Sheet1 dan dua format laporan VALINS
 src/master.ts         Master STO/LIS dari dashboard
 src/store.ts          Snapshot harian dan status pengiriman
