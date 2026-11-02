@@ -76,7 +76,7 @@ try {
     await store.prepareUpload(base - 6, datedChat, 1, stamp(27, 8), snapshot(2), '2026-10-25');
     await store.prepareUpload(base - 7, datedChat, 2, stamp(27, 8), snapshot(3), '2026-10-26');
     const datedReports = await store.report(datedChat, '2026-10-26');
-    assert.match(datedReports[3]!, /📅 26 Oktober 2026/);
+    assert.doesNotMatch(datedReports[3]!, /📅|🕒 Diupload:/);
     assert.match(datedReports[3]!, /SALDO \(H-1\): 2\n/);
     // Correct the 25th after the 26th was already reported; /report must refresh H-1.
     await store.prepareUpload(base - 8, datedChat, 3, stamp(27, 9), snapshot(4), '2026-10-25');

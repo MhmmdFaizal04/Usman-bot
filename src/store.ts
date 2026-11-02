@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import { InputError, previousDate, reconciliation, renderReports, validDate, witaDate, type Snapshot } from './report.js';
+import { InputError, previousDate, reconciliation, renderReports, stripReportTimestamps, validDate, witaDate, type Snapshot } from './report.js';
 import { renderValinsReports, type ValinsKind, type ValinsScope, type ValinsSnapshot } from './valins.js';
 import { BRANCHES } from './master.js';
 import type { OutgoingMessage } from './messages.js';
@@ -212,6 +212,16 @@ export class Store {
     `;
   }
 
+  async fail(updateId: number, owner: string, code: number, reason: string): Promise<void> {
+    // Advance the processing cursor for compatibility with retries from older deployments.
+    // failed_at records that this job was abandoned, not successfully delivered.
+    await this.sql`
+      UPDATE telegram_jobs SET delivered = jsonb_array_length(messages), completed_at = NOW(),
+        failed_at = NOW(), last_error_code = ${code}, failure_reason = ${reason}
+      WHERE update_id = ${updateId} AND lease_owner = ${owner} AND completed_at IS NULL
+    `;
+  }
+
   async release(updateId: number, owner: string): Promise<void> {
     await this.sql`
       UPDATE telegram_jobs SET lease_owner = NULL, lease_until = NULL
@@ -221,5 +231,6 @@ export class Store {
 }
 
 export function selectUnspecReports(reports: string[], scope: ValinsScope): string[] {
-  return scope === 'SEMUA' ? reports : [reports[BRANCHES.indexOf(scope)]!];
+  const selected = scope === 'SEMUA' ? reports : [reports[BRANCHES.indexOf(scope)]!];
+  return selected.map(stripReportTimestamps);
 }

@@ -51,7 +51,7 @@ test('old REPORTED DATE never prevents a current upload from being reported', ()
   const snapshot = parseSnapshot('INCIDENT,WORKZONE,REPORTED DATE\nINC1,WON,2020-01-01 00:00:00');
   const reports = renderReports(snapshot, null, timestamp);
   assert.equal(reports.length, 4);
-  assert.match(reports[3]!, /27 Oktober 2026/);
+  assert.doesNotMatch(reports[3]!, /📅|🕒 Diupload:/);
   assert.match(reports[3]!, /SALDO \(H\): 1\n/);
   assert.match(reports[3]!, /SALDO \(H-1\): Belum tersedia/);
   assert.match(reports[3]!, /TOTAL LIS: 101\.503/);
@@ -109,8 +109,7 @@ test('caption dates separate historical exports uploaded on the same day', () =>
   }
   const snapshot = parseSnapshot(csv('I1,WON,[UNSPEC],BACKEND'));
   const report = renderReports(snapshot, null, timestamp, '2026-10-25')[3]!;
-  assert.match(report, /📅 25 Oktober 2026\n/);
-  assert.match(report, /🕒 Diupload: 27 Oktober 2026/);
+  assert.doesNotMatch(report, /📅|🕒 Diupload:/);
 });
 
 test('routine CSV uploaded on the 27th means data 26 / comparison 25; next upload day advances both dates', () => {

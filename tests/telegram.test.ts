@@ -83,3 +83,15 @@ test('photo and full-text fallback use Telegram reply parameters and preserve th
   assert.deepEqual(calls[1]!.body, { chat_id: '-100123', message_thread_id: 42, text: 'laporan lengkap', reply_parameters: reply });
   assert.equal('protect_content' in calls[0]!.body, false);
 });
+
+test('group migration errors retain the destination metadata for recovery', async t => {
+  t.mock.method(globalThis, 'fetch', async () => Response.json({
+    ok: false, error_code: 400, parameters: { migrate_to_chat_id: -100999 }
+  }, { status: 400 }));
+  await assert.rejects(new Telegram('test-token').send('-999', 'hello'), (error: unknown) => {
+    assert.ok(error instanceof TelegramError);
+    assert.equal(error.code, 400);
+    assert.equal(error.migrateToChatId, -100999);
+    return true;
+  });
+});

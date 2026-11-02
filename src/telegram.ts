@@ -22,9 +22,9 @@ export interface TelegramCallbackQuery {
 }
 export interface TelegramUpdate { update_id: number; message?: TelegramMessage; callback_query?: TelegramCallbackQuery }
 
-interface ApiResponse<T> { ok: boolean; result: T; error_code?: number; parameters?: { retry_after?: number } }
+interface ApiResponse<T> { ok: boolean; result: T; error_code?: number; parameters?: { retry_after?: number; migrate_to_chat_id?: number } }
 export class TelegramError extends Error {
-  constructor(public readonly code: number, public readonly retryAfter?: number) {
+  constructor(public readonly code: number, public readonly retryAfter?: number, public readonly migrateToChatId?: number) {
     // Do not include Telegram response descriptions or token-bearing URLs in logs.
     super(`Telegram API gagal (kode ${code}).`);
   }
@@ -46,7 +46,7 @@ export class Telegram {
     let payload: ApiResponse<T>;
     try { payload = await response.json() as ApiResponse<T>; }
     catch { throw new TelegramError(response.status || 502); }
-    if (!response.ok || !payload.ok) throw new TelegramError(payload.error_code ?? response.status, payload.parameters?.retry_after);
+    if (!response.ok || !payload.ok) throw new TelegramError(payload.error_code ?? response.status, payload.parameters?.retry_after, payload.parameters?.migrate_to_chat_id);
     return payload.result;
   }
 

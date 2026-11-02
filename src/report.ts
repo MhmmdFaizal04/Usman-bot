@@ -132,7 +132,7 @@ export function renderReports(snapshot: Snapshot, previous: Snapshot | null, tim
     const highest = bad[0];
     return [
       `📊 SUMMARY PERFORMANSI UNSPEC – BRANCH ${branch}`,
-      `📅 ${updateLabel(timestampSeconds, reportDate)}`, '',
+      '',
       `SALDO (H): ${integer.format(current.saldo)}`,
       `SALDO (H-1): ${old ? integer.format(old.saldo) : 'Belum tersedia'}`,
       `TARGET SALDO 0,10%: ${integer.format(Math.floor(current.lis / 1000))}`,
@@ -147,6 +147,10 @@ export function renderReports(snapshot: Snapshot, previous: Snapshot | null, tim
       'Ket: 🟢 = Mencapai target (≤ 0,10%) | 🔴 = Di atas target (> 0,10%)'
     ].join('\n');
   });
+}
+
+export function stripReportTimestamps(report: string): string {
+  return report.split('\n').filter(line => !/^📅 /u.test(line) && !/^🕒 Diupload:/u.test(line)).join('\n');
 }
 
 export function reconciliation(snapshot: Snapshot): string | null {

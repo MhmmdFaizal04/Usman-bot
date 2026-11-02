@@ -10,6 +10,7 @@
     "db:setup": "tsx scripts/setup-db.ts",
     "db:check": "tsx scripts/check-storage.ts",
     "connections:check": "tsx scripts/check-connections.ts",
+    "queue:recover": "tsx scripts/recover-queue.ts",
     "webhook:set": "tsx scripts/set-webhook.ts",
     "report:preview": "tsx scripts/preview.ts",
     "valins:preview": "tsx scripts/preview-valins.ts"

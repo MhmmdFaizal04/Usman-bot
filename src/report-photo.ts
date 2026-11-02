@@ -1,4 +1,4 @@
-import { InputError } from './report.js';
+import { InputError, stripReportTimestamps } from './report.js';
 import type { OutgoingMessage, PhotoMessage, ReplyParameters } from './messages.js';
 import type { TelegramMessage } from './telegram.js';
 
@@ -10,10 +10,11 @@ export function prepareReportPhoto(message: TelegramMessage, botId: string): Out
   if (!original?.from?.is_bot || String(original.from.id) !== botId || original.chat.id !== message.chat.id) {
     throw new InputError('Untuk membuat laporan bergambar, tekan Reply/Balas pada pesan laporan dari bot ini, lalu kirim satu foto.');
   }
-  const report = original.text ?? original.caption;
-  if (!report || !REPORT_TITLE.test(report)) {
+  const source = original.text ?? original.caption;
+  if (!source || !REPORT_TITLE.test(source)) {
     throw new InputError('Balas pesan yang berisi laporan UNSPEC atau VALINS, bukan pesan menu atau petunjuk bot.');
   }
+  const report = stripReportTimestamps(source);
   const photo = message.photo?.filter(item => item.file_id && item.width > 0 && item.height > 0)
     .reduce<NonNullable<TelegramMessage['photo']>[number] | null>((largest, item) =>
       !largest || item.width * item.height > largest.width * largest.height ||

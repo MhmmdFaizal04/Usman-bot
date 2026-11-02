@@ -222,6 +222,8 @@ vercel.json           Konfigurasi deployment
 ## Pemulihan dan troubleshooting
 
 - **Bot diam:** periksa webhook production, Deployment Protection, dan log function Vercel.
+- **Antrean tertahan setelah bot dikeluarkan atau grup berubah menjadi supergroup:** versi terbaru mengabaikan notifikasi layanan tanpa membalas. Pengiriman yang ditolak Telegram dengan error permanen 400/403/404 dicatat sebagai gagal dan update diakui agar tidak menahan pengguna lain. Gangguan sementara dan rate limit 429 tetap dicoba ulang.
+- Untuk memulihkan job lama yang tertahan pada grup tidak dapat diakses, jalankan `npm run db:setup`, lalu `npm run queue:recover`. Script memeriksa tujuan melalui Telegram dan hanya melewati tujuan yang dikonfirmasi menolak bot (403) atau telah bermigrasi (400 dengan identitas supergroup baru). Pesan, waktu gagal, kode error, dan alasan tetap tersimpan; snapshot laporan tidak dihapus.
 - **Database belum siap:** jalankan `npm run db:setup` dengan connection string yang sama seperti production.
 - **H-1 kosong:** harus ada snapshot tanggal sebelumnya di chat yang sama. Anda bisa mengisi data historis dengan caption `tanggal=YYYY-MM-DD`. Dua file yang diupload hari ini tanpa caption sama-sama dianggap snapshot hari ini, bukan otomatis dua tanggal berbeda.
 - **Laporan tidak lengkap karena gangguan sementara:** Telegram mengulang webhook; bot melanjutkan dari pesan yang belum tercatat terkirim. `/report` juga bisa digunakan untuk mengirim ulang laporan tersimpan.

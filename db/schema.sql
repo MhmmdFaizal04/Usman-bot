@@ -46,3 +46,8 @@ CREATE TABLE IF NOT EXISTS report_preferences (
 );
 
 ALTER TABLE report_preferences ADD COLUMN IF NOT EXISTS upload_date DATE;
+
+-- Kegagalan permanen tetap tercatat, tetapi tidak menahan antrean update Telegram.
+ALTER TABLE telegram_jobs ADD COLUMN IF NOT EXISTS failed_at TIMESTAMPTZ;
+ALTER TABLE telegram_jobs ADD COLUMN IF NOT EXISTS last_error_code INTEGER;
+ALTER TABLE telegram_jobs ADD COLUMN IF NOT EXISTS failure_reason TEXT;

@@ -37,6 +37,9 @@ test('webhook verifies the secret and accepts all users without an account allow
     assert.equal(await run('POST', 'test_secret_12345678', {
       update_id: 2, message: { from: { id: 100 }, chat: { id: -100999 }, date: 1, message_id: 2, text: '/start' }
     }), 200);
+    assert.equal(await run('POST', 'test_secret_12345678', {
+      update_id: 3, message: { from: { id: 100 }, chat: { id: -999 }, date: 1, message_id: 3, migrate_to_chat_id: -100999 }
+    }), 200);
     assert.equal(lookup.mock.callCount(), 2);
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
@@ -210,6 +213,48 @@ test('photo reply creates a delivery job and retries long-report text without se
     assert.equal(sends.length, 4);
     assert.equal(prepare.mock.callCount(), 2);
     assert.equal(preferences.mock.callCount(), 0);
+  } finally {
+    for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
+    Object.assign(process.env, original);
+  }
+});
+
+test('permanent Telegram delivery failures are acknowledged; rate limits and outages remain retryable', async t => {
+  const original = { ...process.env };
+  Object.assign(process.env, {
+    TELEGRAM_BOT_TOKEN: '777:test', TELEGRAM_WEBHOOK_SECRET: 'test_secret_12345678', DATABASE_URL: 'postgresql://not-connected'
+  });
+  const jobs = new Map<number, Job>();
+  const errors = [new TelegramError(403), new TelegramError(400, undefined, -100999), new TelegramError(429, 10), new TelegramError(503)];
+  t.mock.method(Store.prototype, 'getJob', async (id: number) => jobs.get(id) ?? null);
+  t.mock.method(Store.prototype, 'claim', async (id: number) => jobs.get(id) ?? null);
+  const failed = t.mock.method(Store.prototype, 'fail', async (id: number, _owner: string, _code: number, _reason: string) => {
+    jobs.get(id)!.delivered = jobs.get(id)!.messages.length;
+  });
+  const released = t.mock.method(Store.prototype, 'release', async () => {});
+  const advance = t.mock.method(Store.prototype, 'advance', async () => {});
+  t.mock.method(Telegram.prototype, 'send', async () => { throw errors.shift(); });
+  t.mock.method(console, 'error', () => {});
+  try {
+    const statuses: number[] = [];
+    for (let index = 0; index < 4; index++) {
+      const id = 300 + index;
+      jobs.set(id, { update_id: String(id), chat_id: '-999', messages: ['pending'], delivered: 0 });
+      let status = 0;
+      const response = { setHeader() {}, status(code: number) { status = code; return this; }, json() { return this; } } as unknown as ApiResponse;
+      await handler({ method: 'POST', headers: { 'x-telegram-bot-api-secret-token': 'test_secret_12345678' }, body: {
+        update_id: id, message: { message_id: id, date: 1793062800, from: { id: 123 }, chat: { id: -999 }, text: '/start' }
+      } } as unknown as ApiRequest, response);
+      statuses.push(status);
+    }
+    assert.deepEqual(statuses, [200, 200, 503, 503]);
+    assert.equal(failed.mock.callCount(), 2);
+    assert.equal(failed.mock.calls[0]!.arguments[2], 403);
+    assert.equal(failed.mock.calls[1]!.arguments[3], 'group_migrated');
+    assert.equal(jobs.get(300)!.delivered, 1);
+    assert.equal(jobs.get(302)!.delivered, 0);
+    assert.equal(released.mock.callCount(), 4);
+    assert.equal(advance.mock.callCount(), 0);
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
     Object.assign(process.env, original);

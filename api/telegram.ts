@@ -71,6 +71,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
         !Number.isSafeInteger(message.date) || !Number.isSafeInteger(message.message_id)) {
       res.status(200).json({ ok: true }); return;
     }
+    // Join/leave/migration events are not user requests and must not trigger a reply
+    // to a group that has just been removed or upgraded to a supergroup.
+    if (!callback && !message.text && !message.document && !message.photo?.length) {
+      res.status(200).json({ ok: true }); return;
+    }
     const chatId = String(message.chat.id);
     const userId = String(actor.id);
     const threadId = message.message_thread_id ?? 0;
@@ -144,6 +149,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     const owner = randomUUID();
     const claimed = await store.claim(update.update_id, owner);
     if (!claimed) { res.status(503).json({ error: 'Update sedang diproses, coba ulang.' }); return; }
+    let permanentFailure = false;
     try {
       for (let index = claimed.delivered; index < claimed.messages.length; index++) {
         // Stop before Vercel's time limit; Telegram can retry and resume unsent messages.
@@ -151,7 +157,16 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
           res.status(503).json({ error: 'Pemrosesan akan dilanjutkan.' });
           return;
         }
-        await telegram.send(chatId, claimed.messages[index]!, message.message_thread_id);
+        try {
+          await telegram.send(chatId, claimed.messages[index]!, message.message_thread_id);
+        } catch (error) {
+          if (!(error instanceof TelegramError) || ![400, 403, 404].includes(error.code)) throw error;
+          const reason = error.migrateToChatId ? 'group_migrated' : `telegram_${error.code}`;
+          await store.fail(update.update_id, owner, error.code, reason);
+          console.error(`Pengiriman dihentikan: ${reason}.`);
+          permanentFailure = true;
+          break;
+        }
         await store.advance(update.update_id, owner, index + 1, index + 1 === claimed.messages.length);
         // Telegram limits consecutive messages to the same chat.
         if (index + 1 < claimed.messages.length) await new Promise(resolve => setTimeout(resolve, 1100));
@@ -159,7 +174,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
     } finally {
       await store.release(update.update_id, owner);
     }
-    res.status(200).json({ ok: true });
+    res.status(200).json({ ok: true, ...(permanentFailure ? { delivery_failed: true } : {}) });
   } catch (error) {
     // Never log raw CSV, customer records, database URLs, or fetch errors containing the bot token.
     console.error('Webhook gagal:', error instanceof TelegramError ? error.message : 'Kesalahan konfigurasi, database, atau pemrosesan.');
