@@ -2,59 +2,88 @@ export const BRANCHES = ['BONE', 'KENDARI', 'MAKASSAR', 'PARE-PARE'] as const;
 export type Branch = (typeof BRANCHES)[number];
 export interface StoMaster { branch: Branch; lis: number }
 
-// Hanya mapping dan customers dari unspec-riwayat.json, tanpa snapshot tiket lama.
+export const LIS_EFFECTIVE_FROM = '2026-11-01';
+export const LIS_SOURCE = 'UNSPEC-Sulbagsel-Dashboard-November-2026.html';
+
+// Mapping dan customers dashboard November, tanpa mengimpor snapshot tiket.
 export const MASTER: Record<string, StoMaster> = {
-  BBU: { branch: 'KENDARI', lis: 14416 },
-  RAH: { branch: 'KENDARI', lis: 3253 },
-  WNC: { branch: 'KENDARI', lis: 2262 },
-  KDR: { branch: 'KENDARI', lis: 15621 },
-  KKA: { branch: 'KENDARI', lis: 5543 },
-  LSS: { branch: 'KENDARI', lis: 1908 },
-  PMA: { branch: 'KENDARI', lis: 2466 },
-  MDG: { branch: 'KENDARI', lis: 30779 },
-  UNH: { branch: 'KENDARI', lis: 7433 },
-  BAL: { branch: 'MAKASSAR', lis: 20028 },
-  MAT: { branch: 'MAKASSAR', lis: 21017 },
-  BLK: { branch: 'BONE', lis: 6942 },
-  BTN: { branch: 'BONE', lis: 3307 },
-  JNP: { branch: 'MAKASSAR', lis: 3842 },
-  SLY: { branch: 'BONE', lis: 2342 },
-  SIN: { branch: 'BONE', lis: 4640 },
-  WTP: { branch: 'BONE', lis: 10863 },
-  MAR: { branch: 'MAKASSAR', lis: 5463 },
-  PKN: { branch: 'MAKASSAR', lis: 6121 },
-  ANT: { branch: 'MAKASSAR', lis: 8618 },
-  PNK: { branch: 'MAKASSAR', lis: 30173 },
-  KIM: { branch: 'MAKASSAR', lis: 2092 },
-  SUD: { branch: 'MAKASSAR', lis: 14662 },
-  MAL: { branch: 'MAKASSAR', lis: 629 },
-  SUG: { branch: 'MAKASSAR', lis: 19365 },
-  TKA: { branch: 'MAKASSAR', lis: 4968 },
-  TMA: { branch: 'MAKASSAR', lis: 11331 },
-  MAJ: { branch: 'PARE-PARE', lis: 4506 },
-  MMS: { branch: 'PARE-PARE', lis: 1436 },
-  PLW: { branch: 'PARE-PARE', lis: 4672 },
-  WON: { branch: 'PARE-PARE', lis: 3347 },
-  MAK: { branch: 'PARE-PARE', lis: 4593 },
-  RTP: { branch: 'PARE-PARE', lis: 7306 },
-  MAM: { branch: 'PARE-PARE', lis: 10503 },
-  MAS: { branch: 'PARE-PARE', lis: 5703 },
-  MLL: { branch: 'PARE-PARE', lis: 1688 },
-  SRK: { branch: 'PARE-PARE', lis: 5643 },
-  PLP: { branch: 'PARE-PARE', lis: 18335 },
-  BAR: { branch: 'MAKASSAR', lis: 3989 },
-  PRE: { branch: 'PARE-PARE', lis: 13462 },
-  PIN: { branch: 'PARE-PARE', lis: 8478 },
-  ENR: { branch: 'PARE-PARE', lis: 2777 },
-  RPN: { branch: 'PARE-PARE', lis: 1823 },
-  SID: { branch: 'PARE-PARE', lis: 6342 },
-  TTE: { branch: 'PARE-PARE', lis: 889 },
-  AJN: { branch: 'BONE', lis: 476 },
-  CGI: { branch: 'BONE', lis: 1873 },
-  SIW: { branch: 'BONE', lis: 812 },
-  SKG: { branch: 'BONE', lis: 9218 },
-  WTG: { branch: 'BONE', lis: 4127 }
+  BBU: { branch: 'KENDARI', lis: 14476 },
+  RAH: { branch: 'KENDARI', lis: 3376 },
+  WNC: { branch: 'KENDARI', lis: 2433 },
+  KDR: { branch: 'KENDARI', lis: 15891 },
+  KKA: { branch: 'KENDARI', lis: 5912 },
+  LSS: { branch: 'KENDARI', lis: 1938 },
+  PMA: { branch: 'KENDARI', lis: 2634 },
+  MDG: { branch: 'KENDARI', lis: 31445 },
+  UNH: { branch: 'KENDARI', lis: 8036 },
+  BAL: { branch: 'MAKASSAR', lis: 19456 },
+  MAT: { branch: 'MAKASSAR', lis: 21245 },
+  BLK: { branch: 'BONE', lis: 7650 },
+  BTN: { branch: 'BONE', lis: 3542 },
+  JNP: { branch: 'MAKASSAR', lis: 4233 },
+  SLY: { branch: 'BONE', lis: 2419 },
+  SIN: { branch: 'BONE', lis: 5130 },
+  WTP: { branch: 'BONE', lis: 11369 },
+  MAR: { branch: 'MAKASSAR', lis: 5625 },
+  PKN: { branch: 'MAKASSAR', lis: 6520 },
+  ANT: { branch: 'MAKASSAR', lis: 8946 },
+  PNK: { branch: 'MAKASSAR', lis: 30500 },
+  KIM: { branch: 'MAKASSAR', lis: 1954 },
+  SUD: { branch: 'MAKASSAR', lis: 15412 },
+  MAL: { branch: 'MAKASSAR', lis: 710 },
+  SUG: { branch: 'MAKASSAR', lis: 20041 },
+  TKA: { branch: 'MAKASSAR', lis: 5266 },
+  TMA: { branch: 'MAKASSAR', lis: 11636 },
+  MAJ: { branch: 'PARE-PARE', lis: 4575 },
+  MMS: { branch: 'PARE-PARE', lis: 1525 },
+  PLW: { branch: 'PARE-PARE', lis: 4776 },
+  WON: { branch: 'PARE-PARE', lis: 3410 },
+  MAK: { branch: 'PARE-PARE', lis: 4844 },
+  RTP: { branch: 'PARE-PARE', lis: 7757 },
+  MAM: { branch: 'PARE-PARE', lis: 10885 },
+  MAS: { branch: 'PARE-PARE', lis: 6092 },
+  MLL: { branch: 'PARE-PARE', lis: 1748 },
+  SRK: { branch: 'PARE-PARE', lis: 5924 },
+  PLP: { branch: 'PARE-PARE', lis: 19116 },
+  BAR: { branch: 'MAKASSAR', lis: 4210 },
+  PRE: { branch: 'PARE-PARE', lis: 13804 },
+  PIN: { branch: 'PARE-PARE', lis: 8926 },
+  ENR: { branch: 'PARE-PARE', lis: 2849 },
+  RPN: { branch: 'PARE-PARE', lis: 1984 },
+  SID: { branch: 'PARE-PARE', lis: 6630 },
+  TTE: { branch: 'PARE-PARE', lis: 1087 },
+  AJN: { branch: 'BONE', lis: 505 },
+  CGI: { branch: 'BONE', lis: 2031 },
+  SIW: { branch: 'BONE', lis: 833 },
+  SKG: { branch: 'BONE', lis: 9695 },
+  WTG: { branch: 'BONE', lis: 4360 }
 };
+
+// Acuan Oktober tetap tersedia untuk upload historis sebelum 1 November 2026.
+const OCTOBER_LIS: Record<string, number> = {
+  BBU: 14416, RAH: 3253, WNC: 2262, KDR: 15621, KKA: 5543, LSS: 1908, PMA: 2466, MDG: 30779, UNH: 7433,
+  BAL: 20028, MAT: 21017, BLK: 6942, BTN: 3307, JNP: 3842, SLY: 2342, SIN: 4640, WTP: 10863,
+  MAR: 5463, PKN: 6121, ANT: 8618, PNK: 30173, KIM: 2092, SUD: 14662, MAL: 629, SUG: 19365, TKA: 4968, TMA: 11331,
+  MAJ: 4506, MMS: 1436, PLW: 4672, WON: 3347, MAK: 4593, RTP: 7306, MAM: 10503, MAS: 5703, MLL: 1688,
+  SRK: 5643, PLP: 18335, BAR: 3989, PRE: 13462, PIN: 8478, ENR: 2777, RPN: 1823, SID: 6342, TTE: 889,
+  AJN: 476, CGI: 1873, SIW: 812, SKG: 9218, WTG: 4127
+};
+export const OCTOBER_MASTER: Record<string, StoMaster> = Object.fromEntries(
+  Object.entries(MASTER).map(([code, sto]) => [code, { ...sto, lis: OCTOBER_LIS[code]! }])
+);
+
+export function masterForDate(date?: string): Record<string, StoMaster> {
+  return date && date < LIS_EFFECTIVE_FROM ? OCTOBER_MASTER : MASTER;
+}
+
+export function masterForStoredBranch(branch: Branch, lis: number, date: string): Record<string, StoMaster> {
+  const dated = masterForDate(date);
+  const total = (master: Record<string, StoMaster>): number => Object.values(master)
+    .filter(sto => sto.branch === branch).reduce((sum, sto) => sum + sto.lis, 0);
+  if (total(dated) === lis) return dated;
+  // Older snapshots have a branch LIS but no per-STO LIS. Match their saved basis.
+  return [OCTOBER_MASTER, MASTER].find(master => total(master) === lis) ?? dated;
+}
 
 // STO di luar 4 branch yang dikenal dashboard: dikecualikan, bukan dianggap error.
 export const EXCLUDED_STOS = new Set(

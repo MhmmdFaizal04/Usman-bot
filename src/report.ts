@@ -1,8 +1,8 @@
 import { parse } from 'csv-parse/sync';
-import { BRANCHES, EXCLUDED_STOS, MASTER, type Branch } from './master.js';
+import { BRANCHES, EXCLUDED_STOS, masterForDate, masterForStoredBranch, type Branch } from './master.js';
 
 export class InputError extends Error {}
-export interface BranchSnapshot { saldo: number; lis: number; stos: Record<string, number> }
+export interface BranchSnapshot { saldo: number; lis: number; stos: Record<string, number>; stoLis?: Record<string, number> }
 export interface Snapshot {
   branches: Record<Branch, BranchSnapshot>;
   totalRows: number;
@@ -15,7 +15,9 @@ const decimal = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maxim
 export const percent = (value: number): string => `${decimal.format(value)}%`;
 export const MAX_CSV_BYTES = 10 * 1024 * 1024;
 
-export function parseSnapshot(text: string): Snapshot {
+export function parseSnapshot(text: string, reportDate?: string): Snapshot {
+  if (reportDate && !validDate(reportDate)) throw new InputError('Tanggal laporan tidak valid.');
+  const master = masterForDate(reportDate);
   if (Buffer.byteLength(text, 'utf8') > MAX_CSV_BYTES) throw new InputError('Ukuran CSV maksimal 10 MB.');
   const firstLine = text.replace(/^\uFEFF/, '').split(/\r?\n/, 1)[0] ?? '';
   const delimiter = firstLine.split(';').length > firstLine.split(',').length ? ';' : ',';
@@ -48,8 +50,9 @@ export function parseSnapshot(text: string): Snapshot {
   }
   const branches = Object.fromEntries(BRANCHES.map(branch => [branch, {
     saldo: 0,
-    lis: Object.values(MASTER).filter(sto => sto.branch === branch).reduce((sum, sto) => sum + sto.lis, 0),
-    stos: Object.fromEntries(Object.entries(MASTER).filter(([, sto]) => sto.branch === branch).map(([code]) => [code, 0]))
+    lis: Object.values(master).filter(sto => sto.branch === branch).reduce((sum, sto) => sum + sto.lis, 0),
+    stos: Object.fromEntries(Object.entries(master).filter(([, sto]) => sto.branch === branch).map(([code]) => [code, 0])),
+    stoLis: Object.fromEntries(Object.entries(master).filter(([, sto]) => sto.branch === branch).map(([code, sto]) => [code, sto.lis]))
   }])) as Record<Branch, BranchSnapshot>;
   let excludedRows = 0;
   let filteredRows = 0;
@@ -62,14 +65,14 @@ export function parseSnapshot(text: string): Snapshot {
       continue;
     }
     const code = row.WORKZONE!.trim().toUpperCase();
-    const master = MASTER[code];
-    if (!master) {
+    const sto = master[code];
+    if (!sto) {
       if (EXCLUDED_STOS.has(code)) excludedRows++;
       else unknown.add(code);
       continue;
     }
-    branches[master.branch].saldo++;
-    branches[master.branch].stos[code]!++;
+    branches[sto.branch].saldo++;
+    branches[sto.branch].stos[code]!++;
   }
   if (unknown.size) {
     throw new InputError(`STO belum terpetakan: ${[...unknown].slice(0, 15).join(', ')}. Perbarui master sebelum mengupload ulang.`);
@@ -124,9 +127,11 @@ export function renderReports(snapshot: Snapshot, previous: Snapshot | null, tim
     const direction = old ? Math.sign(current.saldo * old.lis - old.saldo * current.lis) : 0;
     const deltaText = delta === null ? 'Belum tersedia' :
       `${delta > 0 ? '+' : ''}${decimal.format(Object.is(delta, -0) ? 0 : delta)}% (${direction < 0 ? 'Membaik' : direction > 0 ? 'Memburuk' : 'Tetap'})`;
-    const stos = Object.entries(current.stos).map(([code, saldo]) => ({
-      code, saldo, lis: MASTER[code]!.lis, rate: saldo / MASTER[code]!.lis * 100
-    }));
+    const fallbackMaster = masterForStoredBranch(branch, current.lis, reportDate);
+    const stos = Object.entries(current.stos).map(([code, saldo]) => {
+      const lis = current.stoLis?.[code] ?? fallbackMaster[code]!.lis;
+      return { code, saldo, lis, rate: saldo / lis * 100 };
+    });
     const good = stos.filter(sto => sto.saldo * 1000 <= sto.lis).sort((a, b) => a.rate - b.rate || a.code.localeCompare(b.code));
     const bad = stos.filter(sto => sto.saldo * 1000 > sto.lis).sort((a, b) => b.rate - a.rate || a.code.localeCompare(b.code));
     const highest = bad[0];

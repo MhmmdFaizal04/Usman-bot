@@ -105,7 +105,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse): Promis
             const reportDate = resolveCsvReportDate(message.caption, message.date);
             if (preference && preference.kind !== 'unspec') throw new InputError('Pilihan Anda VALINS. Kirim Excel (.xlsx), atau gunakan /start untuk memilih UNSPEC.');
             const csv = await telegram.downloadCsv(message.document);
-            const snapshot = parseSnapshot(csv);
+            const snapshot = parseSnapshot(csv, reportDate);
             await store.prepareUpload(update.update_id, chatId, message.message_id, message.date, snapshot, reportDate,
               'SEMUA', { kind: 'unspec', userId, threadId });
           } else {

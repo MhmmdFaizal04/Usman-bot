@@ -113,11 +113,18 @@ test('XLSX upload is parsed and stored as VALINS; VALINS command selects the req
     assert.equal(await run(14, { document: { file_id: 'file', file_name: 'report.csv' } }), 200);
     assert.equal(csv.mock.callCount(), 1);
     assert.equal(csv.mock.calls[0]!.arguments[5], '2026-10-26');
+    assert.equal(csv.mock.calls[0]!.arguments[4]!.branches['PARE-PARE'].lis, 101503);
     assert.deepEqual(csv.mock.calls[0]!.arguments[7], { kind: 'unspec', userId: '123', threadId: 0 });
     preference = { kind: 'unspec', scope: 'BONE' };
     assert.equal(await run(15, { document: { file_id: 'file', file_name: 'report.csv' } }), 200);
     assert.equal(csv.mock.calls[1]!.arguments[6], 'SEMUA');
     assert.deepEqual(csv.mock.calls[1]!.arguments[7], { kind: 'unspec', userId: '123', threadId: 0 });
+    assert.equal(await run(16, {
+      date: Date.parse('2026-11-02T09:00:00+08:00') / 1000,
+      document: { file_id: 'file', file_name: 'report.csv' }
+    }), 200);
+    assert.equal(csv.mock.calls[2]!.arguments[5], '2026-11-01');
+    assert.equal(csv.mock.calls[2]!.arguments[4]!.branches['PARE-PARE'].lis, 105932);
   } finally {
     for (const key of Object.keys(process.env)) if (!(key in original)) delete process.env[key];
     Object.assign(process.env, original);

@@ -1,16 +1,47 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BRANCHES } from '../src/master.js';
-import { InputError, parseSnapshot, previousDate, reconciliation, renderReports, resolveCsvReportDate, resolveReportDate, witaDate } from '../src/report.js';
+import { InputError, parseSnapshot as parseSnapshotForDate, previousDate, reconciliation, renderReports, resolveCsvReportDate, resolveReportDate, witaDate } from '../src/report.js';
 
 const csv = (...rows: string[]): string => ['INCIDENT,WORKZONE,SUMMARY,STATUS', ...rows].join('\n');
 const timestamp = Date.parse('2026-10-27T09:00:00+08:00') / 1000;
+const parseSnapshot = (text: string, date = '2026-10-26') => parseSnapshotForDate(text, date);
 
-test('master LIS matches the four dashboard branch totals', () => {
+test('historical October LIS matches the four dashboard branch totals', () => {
   const snapshot = parseSnapshot(csv('INC1,WON,[UNSPEC],BACKEND'));
   assert.deepEqual(BRANCHES.map(branch => snapshot.branches[branch].lis), [44600, 83681, 152298, 101503]);
   assert.equal(snapshot.branches['PARE-PARE'].saldo, 1);
   assert.equal(snapshot.branches.BONE.saldo, 0);
+});
+
+test('November data uses the new LIS for every branch, targets and STO rates', () => {
+  const uploadDate = Date.parse('2026-11-02T09:00:00+08:00') / 1000;
+  const date = resolveCsvReportDate(undefined, uploadDate);
+  assert.equal(date, '2026-11-01');
+  const snapshot = parseSnapshot(csv('INC1,MAL,[UNSPEC],BACKEND'), date);
+  assert.deepEqual(BRANCHES.map(branch => snapshot.branches[branch].lis), [47534,86141,155754,105932]);
+  assert.deepEqual(BRANCHES.map(branch => Math.floor(snapshot.branches[branch].lis / 1000)), [47,86,155,105]);
+  assert.equal(snapshot.branches.MAKASSAR.stoLis?.MAL, 710);
+  const reports = renderReports(snapshot, null, uploadDate, date);
+  assert.match(reports[2]!, /🔴 MAL: 0,14%/);
+  assert.match(reports[3]!, /TOTAL LIS: 105\.932/);
+  assert.match(reports[3]!, /TARGET SALDO 0,10%: 105\n/);
+  assert.equal(parseSnapshotForDate(csv('INC1,WON,[UNSPEC],BACKEND')).branches['PARE-PARE'].lis, 105932);
+});
+
+test('month changes and legacy snapshots preserve each saved denominator', () => {
+  const previous = parseSnapshot(csv('INC1,MAL,[UNSPEC],BACKEND'), '2026-10-31');
+  const current = parseSnapshot(csv('INC1,MAL,[UNSPEC],BACKEND'), '2026-11-01');
+  assert.equal(previous.branches.MAKASSAR.lis, 152298);
+  assert.equal(current.branches.MAKASSAR.lis, 155754);
+  assert.equal(previous.branches.MAKASSAR.stoLis?.MAL, 629);
+  assert.match(renderReports(current, previous, timestamp, '2026-11-01')[2]!, /SALDO \(H-1\): 1\n/);
+  for (const branch of BRANCHES) delete previous.branches[branch].stoLis;
+  // Existing snapshots created before this update may have October LIS saved under a November date.
+  const legacy = renderReports(previous, null, timestamp, '2026-11-01')[2]!;
+  assert.match(legacy, /TOTAL LIS: 152\.298/);
+  assert.match(legacy, /🔴 MAL: 0,16%/);
+  assert.throws(() => parseSnapshot(csv('INC1,WON,[UNSPEC],BACKEND'), '2026-11-31'), InputError);
 });
 
 test('quoted multiline fields, commas, BOM and semicolon exports parse correctly', () => {

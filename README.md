@@ -198,8 +198,9 @@ Untuk grup, tambahkan bot dan izinkan mengirim pesan. Jika dokumen grup tidak di
 - Hijau jika saldo × 1000 ≤ LIS. Penentuan status menggunakan angka asli sebelum pembulatan.
 - Growth = realisasi H − realisasi H-1. Format `%` mengikuti contoh pengguna; secara matematis ini selisih **poin persentase**, bukan pertumbuhan relatif.
 - STO hijau diurutkan dari realisasi terendah; STO merah dari tertinggi. Semua STO dengan rasio tertinggi yang sama diberi label `(Tertinggi)`.
-- LIS awal: BONE **44.600**, KENDARI **83.681**, MAKASSAR **152.298**, PARE-PARE **101.503**.
-- Perbarui `src/master.ts` jika ada perubahan LIS/pemetaan, lalu build dan redeploy. Snapshot yang sudah tersimpan mempertahankan LIS dan teks laporannya saat diproses.
+- LIS data mulai **1 November 2026**, sesuai `UNSPEC-Sulbagsel-Dashboard-November-2026.html`: BONE **47.534**, KENDARI **86.141**, MAKASSAR **155.754**, PARE-PARE **105.932**. Target saldo masing-masing: **47, 86, 155, 105**.
+- Upload historis bertanggal sebelum 1 November 2026 memakai acuan Oktober: BONE **44.600**, KENDARI **83.681**, MAKASSAR **152.298**, PARE-PARE **101.503**. Pemilihan basis mengikuti **tanggal data**, termasuk caption, bukan tanggal upload atau tanggal tiket.
+- Perbarui `src/master.ts` jika ada perubahan LIS/pemetaan, lalu build dan redeploy. Snapshot baru menyimpan LIS per STO agar cetak ulang konsisten. Arsip yang sudah tersimpan mempertahankan basis dan teks laporannya; untuk menghitung ulang laporan November yang dibuat sebelum pembaruan ini, upload ulang CSV dengan tanggal data yang benar.
 
 ## Struktur proyek
 

@@ -31,7 +31,7 @@ try {
     const snapshot = (count: number) => parseSnapshot([
       'INCIDENT,WORKZONE,SUMMARY,STATUS',
       ...Array.from({ length: count }, (_, index) => `INC${index},WON,[UNSPEC],BACKEND`)
-    ].join('\n'));
+    ].join('\n'), '2026-10-26');
 
     await store.prepareUpload(base, chat, 1, stamp(26, 8), snapshot(1));
     await store.prepareUpload(base - 1, chat, 3, stamp(26, 17), snapshot(2));
